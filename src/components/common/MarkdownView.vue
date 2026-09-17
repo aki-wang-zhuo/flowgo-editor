@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /**
  * Markdown 只读渲染（节点编辑器文档等）。
- * 使用 marked；输出经基础消毒后 v-html。
+ * 解析：marked（GFM）；外观：github-markdown-css 浅色主题。
  */
 import { computed } from 'vue'
 import { marked } from 'marked'
+import 'github-markdown-css/github-markdown-light.css'
 
 const props = withDefaults(
   defineProps<{
@@ -21,7 +22,8 @@ const props = withDefaults(
 
 marked.setOptions({
   gfm: true,
-  breaks: true,
+  // 窄面板文档：段落更干净，不把每个换行都变成 <br>
+  breaks: false,
 })
 
 /** 极简消毒：去掉 script / on* 事件 */
@@ -52,80 +54,53 @@ function escapeHtml(s: string): string {
 </script>
 
 <template>
-  <div v-if="html" class="fg-md" v-html="html" />
+  <!-- markdown-body：github-markdown-css 主题钩子 -->
+  <div v-if="html" class="fg-md markdown-body" v-html="html" />
   <p v-else-if="emptyText" class="fg-md__empty">{{ emptyText }}</p>
 </template>
 
 <style scoped>
-.fg-md {
-  font-size: 13px;
-  line-height: 1.55;
-  color: #334155;
-  word-break: break-word;
-}
-.fg-md :deep(h1),
-.fg-md :deep(h2),
-.fg-md :deep(h3) {
-  margin: 0.85em 0 0.4em;
-  font-weight: 600;
-  color: #0f172a;
-  line-height: 1.3;
-}
-.fg-md :deep(h1) {
-  font-size: 1.15rem;
-}
-.fg-md :deep(h2) {
-  font-size: 1.05rem;
-}
-.fg-md :deep(h3) {
-  font-size: 0.95rem;
-}
-.fg-md :deep(p),
-.fg-md :deep(ul),
-.fg-md :deep(ol) {
-  margin: 0.4em 0;
-}
-.fg-md :deep(ul),
-.fg-md :deep(ol) {
-  padding-left: 1.25em;
-}
-.fg-md :deep(code) {
-  padding: 0.1em 0.35em;
-  font-size: 0.9em;
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-.fg-md :deep(pre) {
-  margin: 0.5em 0;
-  padding: 8px 10px;
-  overflow: auto;
-  background: #0f172a;
-  color: #e2e8f0;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.fg-md :deep(pre code) {
+/*
+ * 在 GitHub 主题之上做窄面板适配：略缩小字号、去掉默认大 padding/背景。
+ */
+.fg-md.markdown-body {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   padding: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #24292f;
   background: transparent;
-  color: inherit;
 }
-.fg-md :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0.5em 0;
+.fg-md.markdown-body :deep(> :first-child) {
+  margin-top: 0 !important;
+}
+.fg-md.markdown-body :deep(> :last-child) {
+  margin-bottom: 0 !important;
+}
+.fg-md.markdown-body :deep(h1) {
+  font-size: 1.25em;
+  padding-bottom: 0.25em;
+}
+.fg-md.markdown-body :deep(h2) {
+  font-size: 1.12em;
+  padding-bottom: 0.2em;
+  margin-top: 1.35em;
+}
+.fg-md.markdown-body :deep(h3) {
+  font-size: 1.02em;
+  margin-top: 1.2em;
+}
+.fg-md.markdown-body :deep(table) {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
   font-size: 12px;
 }
-.fg-md :deep(th),
-.fg-md :deep(td) {
-  border: 1px solid #e2e8f0;
-  padding: 4px 8px;
-  text-align: left;
-}
-.fg-md :deep(th) {
-  background: #f8fafc;
-}
-.fg-md :deep(a) {
-  color: #2563eb;
+.fg-md.markdown-body :deep(pre) {
+  font-size: 12px;
 }
 .fg-md__empty {
   margin: 0;
