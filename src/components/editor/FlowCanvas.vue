@@ -250,6 +250,7 @@ defineExpose({ getGraphData, lf })
       @publish="emit('publish')"
       @discard="emit('discard')"
       @history="emit('history')"
+      @graph-change="emit('graphChange')"
     />
     <RunErrorBubble :lf="lf" />
     <NodeSelectionTools

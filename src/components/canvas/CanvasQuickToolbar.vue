@@ -1,17 +1,20 @@
 <script setup lang="ts">
 /**
- * 画布右上角快捷栏：保存草稿 / 发布菜单 / 刷新 / 显示全部 / 控制台。
+ * 画布右上角快捷栏：保存草稿 / 发布菜单 / 刷新 / 自动布局 / 显示全部 / 控制台。
  * 发布相关（发布、放弃草稿、发布历史）收在同一下拉菜单。
  */
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import {
   DocumentChecked,
   FullScreen,
   Monitor,
+  Rank,
   Refresh,
   Upload,
 } from '@element-plus/icons-vue'
 import type { LfInstance } from '@/canvas/lf-types'
+import { layoutGraph } from '@/canvas/autoLayout'
 import {
   consoleVisible,
   toggleConsole,
@@ -50,6 +53,8 @@ const emit = defineEmits<{
   publish: []
   discard: []
   history: []
+  /** 自动布局后通知父级同步 DSL / dirty */
+  graphChange: []
 }>()
 
 const busy = () => props.saving || props.refreshing || props.publishing
@@ -58,6 +63,27 @@ function fitAllNodes() {
   const lf = props.lf
   if (!lf?.fitView) return
   lf.fitView(40, 40)
+}
+
+/** 自动布局：有选中则只布选中区域，否则全量；完成后适应视口 */
+function runAutoLayout() {
+  if (!props.lf || props.locked) return
+  const r = layoutGraph(props.lf)
+  if (!r.ok) {
+    ElMessage.warning(t('quickToolbar.autoLayoutFailed', { reason: r.reason || '' }))
+    return
+  }
+  emit('graphChange')
+  requestAnimationFrame(() => {
+    props.lf?.fitView?.(40, 40)
+  })
+  const scope =
+    r.scope === 'selection'
+      ? t('quickToolbar.autoLayoutScopeSelection')
+      : t('quickToolbar.autoLayoutScopeAll')
+  ElMessage.success(
+    t('quickToolbar.autoLayoutDone', { scope, count: r.nodeCount ?? 0 }),
+  )
 }
 
 function onPublishCommand(cmd: string) {
@@ -135,6 +161,23 @@ function onPublishCommand(cmd: string) {
         :loading="refreshing"
         :disabled="busy()"
         @click="emit('refresh')"
+      />
+    </el-tooltip>
+    <el-tooltip
+      :content="
+        locked
+          ? t('quickToolbar.autoLayoutLocked')
+          : t('quickToolbar.autoLayout')
+      "
+      placement="bottom"
+      :show-after="300"
+    >
+      <el-button
+        class="fg-quick-bar__btn"
+        :icon="Rank"
+        circle
+        :disabled="!lf || locked || busy()"
+        @click="runAutoLayout"
       />
     </el-tooltip>
     <el-tooltip :content="t('quickToolbar.fitView')" placement="bottom" :show-after="300">

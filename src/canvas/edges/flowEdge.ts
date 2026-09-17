@@ -44,6 +44,9 @@ class FlowEdgeModel extends BezierEdgeModel {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initEdgeData(data: any) {
     super.initEdgeData(data)
+    // 标签始终跟曲线中点（getTextPosition）；打开后节点移动时 LF 只 reset，
+    // 不再叠加 handleEdgeTextMove 的二次平移（否则自动布局大位移会错位）
+    this.customTextPosition = true
     // 禁止边文本编辑/拖拽，避免进入文本编辑态与文本光标
     if (this.text) {
       this.text.editable = false
