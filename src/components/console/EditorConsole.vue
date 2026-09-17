@@ -226,7 +226,7 @@ function onResizeStart(e: MouseEvent) {
 .type {
   font-weight: 700;
   margin-right: 6px;
-  min-width: 36px;
+  min-width: 64px;
   display: inline-block;
 }
 .type.IN {
@@ -237,6 +237,12 @@ function onResizeStart(e: MouseEvent) {
 }
 .type.INFO {
   color: #dcdcaa;
+}
+.type.REQUEST {
+  color: #c586c0;
+}
+.type.RESPONSE {
+  color: #4ec9b0;
 }
 .type.ERROR {
   color: #f14c4c;
@@ -260,6 +266,7 @@ function onResizeStart(e: MouseEvent) {
 }
 .content {
   color: #ce9178;
+  white-space: pre-wrap;
 }
 .error {
   color: #f14c4c;

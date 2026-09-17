@@ -74,8 +74,13 @@ function readLogs(): ConsoleLogItem[] {
       if (!row || typeof row !== 'object') continue
       const r = row as Partial<ConsoleLogItem>
       const ft = String(r.flowType || 'INFO').toUpperCase()
-      const flowType =
-        ft === 'IN' || ft === 'OUT' || ft === 'ERROR' || ft === 'INFO'
+      const flowType: ConsoleLogItem['flowType'] =
+        ft === 'IN' ||
+        ft === 'OUT' ||
+        ft === 'ERROR' ||
+        ft === 'INFO' ||
+        ft === 'REQUEST' ||
+        ft === 'RESPONSE'
           ? (ft as ConsoleLogItem['flowType'])
           : 'INFO'
       out.push({
@@ -244,8 +249,14 @@ export function appendServerDebugLogs(
 ) {
   for (const raw of list || []) {
     const ft = String(raw.flowType || 'INFO').toUpperCase()
-    const flowType =
-      ft === 'IN' || ft === 'OUT' || ft === 'ERROR' ? ft : 'INFO'
+    const flowType: ConsoleLogItem['flowType'] =
+      ft === 'IN' ||
+      ft === 'OUT' ||
+      ft === 'ERROR' ||
+      ft === 'REQUEST' ||
+      ft === 'RESPONSE'
+        ? (ft as ConsoleLogItem['flowType'])
+        : 'INFO'
     appendConsoleLog(
       {
         ts: raw.ts,

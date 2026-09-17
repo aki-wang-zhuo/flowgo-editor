@@ -4,7 +4,7 @@
 export interface ConsoleLogItem {
   id: string
   ts: number
-  flowType: 'IN' | 'OUT' | 'INFO' | 'ERROR'
+  flowType: 'IN' | 'OUT' | 'INFO' | 'ERROR' | 'REQUEST' | 'RESPONSE'
   nodeId?: string
   nodeName?: string
   relationType?: string
