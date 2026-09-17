@@ -5,12 +5,14 @@
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Expand, Fold, Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Expand, Fold, Refresh, Search } from '@element-plus/icons-vue'
 import type { LfInstance } from '@/canvas/lf-types'
 import {
   invalidateComponentCatalog,
   loadComponentGroups,
 } from '@/canvas/componentCatalog'
+import { refreshAllComponentDocs } from '@/canvas/componentDocCache'
 import { currentLocale } from '@/i18n'
 import {
   clearPaletteDndActive,
@@ -31,6 +33,7 @@ const groups = ref<PaletteGroup[]>([])
 const activeNames = ref<string[]>([])
 const keyword = ref('')
 const loading = ref(false)
+const docsRefreshing = ref(false)
 const error = ref('')
 
 async function reload() {
@@ -45,6 +48,19 @@ async function reload() {
     groups.value = []
   } finally {
     loading.value = false
+  }
+}
+
+/** 从服务端重拉全部节点文档并覆盖本地缓存 */
+async function refreshDocs() {
+  docsRefreshing.value = true
+  try {
+    const n = await refreshAllComponentDocs()
+    ElMessage.success(t('nodePalette.docsRefreshed', { count: n }))
+  } catch {
+    ElMessage.error(t('nodePalette.docsRefreshFailed'))
+  } finally {
+    docsRefreshing.value = false
   }
 }
 
@@ -149,6 +165,16 @@ defineExpose({ reload })
         clearable
         :prefix-icon="Search"
       />
+      <button
+        class="palette__btn"
+        type="button"
+        :title="t('nodePalette.refreshDocs')"
+        :disabled="docsRefreshing"
+        :aria-label="t('nodePalette.refreshDocs')"
+        @click="refreshDocs"
+      >
+        <el-icon :class="{ 'is-loading': docsRefreshing }"><Refresh /></el-icon>
+      </button>
       <button
         class="palette__btn"
         type="button"
@@ -279,6 +305,18 @@ defineExpose({ reload })
 .palette__btn:hover {
   background: #eee;
   color: #222;
+}
+.palette__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.palette__btn .is-loading {
+  animation: palette-spin 0.8s linear infinite;
+}
+@keyframes palette-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .palette__hint {
   padding: 8px 6px;
