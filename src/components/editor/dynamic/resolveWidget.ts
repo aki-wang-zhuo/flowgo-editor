@@ -12,6 +12,7 @@ export type ConfigWidget =
   | 'code-js'
   | 'switch'
   | 'number'
+  | 'select'
   | 'router-list'
   | 'var-list'
 
@@ -60,7 +61,8 @@ export function resolveWidget(field: ConfigField): ConfigWidget {
     w === 'code-json' ||
     w === 'code-js' ||
     w === 'switch' ||
-    w === 'number'
+    w === 'number' ||
+    w === 'select'
   ) {
     return w
   }

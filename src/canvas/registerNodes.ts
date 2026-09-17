@@ -11,6 +11,7 @@ import { HttpResponseModel, HttpResponseView } from './nodes/httpResponseStyle'
 import { JsTransformModel, JsTransformView } from './nodes/jsTransformStyle'
 import { InjectModel, InjectView } from './nodes/injectStyle'
 import { GlobalVarsModel, GlobalVarsView } from './nodes/globalVarsStyle'
+import { SingleIOModel, SingleIOView } from './nodes/singleIOStyle'
 import { flowEdge } from './edges/flowEdge'
 import './nodes/nodeRed.css'
 
@@ -28,6 +29,7 @@ export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
   set.add('if')
   set.add('switch')
   set.add('globalVars')
+  set.add('currentTime')
 
   for (const type of set) {
     if (type === 'httpEndpoint') {
@@ -59,6 +61,14 @@ export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
         type,
         view: GlobalVarsView,
         model: GlobalVarsModel,
+      })
+      continue
+    }
+    if (type === 'currentTime') {
+      lf.register({
+        type,
+        view: SingleIOView,
+        model: SingleIOModel,
       })
       continue
     }

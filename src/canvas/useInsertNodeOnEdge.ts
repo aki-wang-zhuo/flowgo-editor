@@ -6,6 +6,7 @@ import { ElMessageBox } from 'element-plus'
 import { t } from '@/i18n'
 import { distPointToBezier, INSERT_HIGHLIGHT_KEY, type BezierPoint } from './bezier'
 import type { LfInstance } from './lf-types'
+import { isSilentSuccessSource } from './nodes/singleIOStyle'
 
 /** 节点中心与曲线的吸附距离（画布坐标 px） */
 const HIT_THRESHOLD = 28
@@ -143,6 +144,7 @@ function insertNodeOnEdge(lf: LfInstance, nodeId: string, edgeId: string) {
 
   const targetNode = lf.getNodeModelById?.(nodeId) as
     | {
+        type?: string
         x: number
         y: number
         anchors?: Array<{ id?: string; x: number; y: number; type?: string }>
@@ -180,15 +182,16 @@ function insertNodeOnEdge(lf: LfInstance, nodeId: string, edgeId: string) {
     edge.resetTextPosition?.()
   }
 
-  // 仅新建下游边（默认 Success，挂右侧出锚点）
+  // 仅新建下游边（默认 Success）；静默类型不显示接线标签
   const rightAnchors = anchors.filter((a) => a.type === 'right')
   const outAnchor = rightAnchors[0] || null
+  const silent = isSilentSuccessSource(targetNode.type)
   lf.addEdge?.({
     type: 'bezier',
     sourceNodeId: nodeId,
     targetNodeId: oldTargetId,
     sourceAnchorId: outAnchor?.id,
-    text: 'Success',
+    text: silent ? '' : 'Success',
     properties: { relation: 'Success' },
   })
 

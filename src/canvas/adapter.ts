@@ -144,6 +144,13 @@ export function dslToGraph(dsl: FlowDSL): LfGraphData {
       sourceAnchorId = `${e.from}_right`
     }
 
+    // 当前时间等：单入单出，relation=Success，画布不显示接线标签
+    if (source?.type === 'currentTime') {
+      text = ''
+      properties.relation = 'Success'
+      sourceAnchorId = `${e.from}_right`
+    }
+
     const edge: LfEdge = {
       id: `edge-${e.from}-${e.to}-${i}`,
       type: 'bezier',

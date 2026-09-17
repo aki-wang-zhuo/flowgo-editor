@@ -118,6 +118,11 @@ function onNumberChange(f: ConfigField, v: number | undefined) {
   emitUp()
 }
 
+function onSelectChange(f: ConfigField, v: string) {
+  local[f.name] = v
+  emitUp()
+}
+
 function onCodeUpdate(f: ConfigField, v: string) {
   local[f.name] = v
   emitUp()
@@ -189,6 +194,29 @@ defineExpose({ closeMaximize })
       </el-form-item>
 
       <el-form-item
+        v-else-if="resolveWidget(f) === 'select'"
+        :label="fieldLabel(f)"
+        :required="f.required"
+      >
+        <div class="select-with-hint">
+          <el-select
+            :model-value="String(local[f.name] ?? '')"
+            filterable
+            style="width: 100%"
+            @update:model-value="(v: string) => onSelectChange(f, v)"
+          >
+            <el-option
+              v-for="opt in f.options || []"
+              :key="opt.value"
+              :label="opt.label || opt.value"
+              :value="opt.value"
+            />
+          </el-select>
+          <span v-if="f.hint" class="switch-hint">{{ f.hint }}</span>
+        </div>
+      </el-form-item>
+
+      <el-form-item
         v-else-if="resolveWidget(f) === 'textarea'"
         :label="fieldLabel(f)"
         :required="f.required"
@@ -255,12 +283,19 @@ defineExpose({ closeMaximize })
 </template>
 
 <style scoped>
-.switch-with-hint {
+.switch-with-hint,
+.select-with-hint {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   width: 100%;
   min-width: 0;
+}
+.switch-with-hint {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
 }
 .switch-hint {
   flex: 1;

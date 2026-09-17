@@ -277,11 +277,13 @@ export function applyActiveFlowPatch(opts: {
         errors.push({ path, message: 'endpoint node missing' })
         continue
       }
+      const fromModel = lf.getNodeModelById?.(e.from) as { type?: string } | undefined
+      const edgeText = fromModel?.type === 'currentTime' ? '' : relation
       lf.addEdge?.({
         type: 'bezier',
         sourceNodeId: e.from,
         targetNodeId: e.to,
-        text: relation,
+        text: edgeText,
         properties: { relation },
         pointsList: e.pointsList,
       })

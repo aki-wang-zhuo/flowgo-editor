@@ -9,6 +9,7 @@ import { useEdgeAdjustOnDblClick } from '@/canvas/useEdgeAdjustOnDblClick'
 import { bindHttpEndpointEdgeRules } from '@/canvas/useHttpEndpointEdges'
 import { bindBranchEdgeRules } from '@/canvas/useBranchEdges'
 import { bindJsTransformEdgeRules } from '@/canvas/useJsTransformEdges'
+import { bindSilentSuccessEdgeRules } from '@/canvas/useSilentSuccessEdges'
 import { bindEdgeDirectionNormalize } from '@/canvas/useEdgeDirection'
 import { bindInsertNodeOnEdge } from '@/canvas/useInsertNodeOnEdge'
 import { bindSuppressSpuriousBlankClick } from '@/canvas/suppressSpuriousBlankClick'
@@ -62,6 +63,7 @@ let disposeEdgeDir: (() => void) | undefined
 let disposeHttpEdges: (() => void) | undefined
 let disposeBranchEdges: (() => void) | undefined
 let disposeJsEdges: (() => void) | undefined
+let disposeSilentEdges: (() => void) | undefined
 let disposeInsertOnEdge: (() => void) | undefined
 let disposeSpuriousBlank: (() => void) | undefined
 
@@ -75,6 +77,7 @@ onMounted(() => {
   disposeHttpEdges = bindHttpEndpointEdgeRules(lf.value)
   disposeBranchEdges = bindBranchEdgeRules(lf.value)
   disposeJsEdges = bindJsTransformEdgeRules(lf.value)
+  disposeSilentEdges = bindSilentSuccessEdgeRules(lf.value)
   disposeInsertOnEdge = bindInsertNodeOnEdge(lf.value)
   disposeSpuriousBlank = bindSuppressSpuriousBlankClick(containerRef.value)
   emit('ready', lf.value)
@@ -94,6 +97,8 @@ onBeforeUnmount(() => {
   disposeBranchEdges = undefined
   disposeJsEdges?.()
   disposeJsEdges = undefined
+  disposeSilentEdges?.()
+  disposeSilentEdges = undefined
   disposeInsertOnEdge?.()
   disposeInsertOnEdge = undefined
   disposeSpuriousBlank?.()

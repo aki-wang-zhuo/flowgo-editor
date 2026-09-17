@@ -42,13 +42,15 @@ export interface ConfigField {
   /** 开关旁补充说明 */
   hint?: string
   /**
-   * text | textarea | code-json | code-js | switch | number | router-list | var-list；
+   * text | textarea | code-json | code-js | switch | number | select | router-list | var-list；
    * 空则按 type 推断。routers 数组即使标 code-json 也会被前端识别为 router-list。
    */
   widget?: string
   rows?: number
   /** 条件显示，如 https=true */
   showIf?: string
+  /** 下拉选项（widget=select） */
+  options?: Array<{ value: string; label: string }>
 }
 
 /** 节点面板单项 */
