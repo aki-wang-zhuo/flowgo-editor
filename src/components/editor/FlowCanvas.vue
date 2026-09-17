@@ -299,32 +299,52 @@ defineExpose({ getGraphData, lf })
   cursor: crosshair;
 }
 
-/* 右下角小地图：标题栏 + 关闭；预览框可拖拽导航 */
+/* 右下角小地图：无外框；默认半透明，悬停不透明并显示关闭 */
 .canvas-wrap :deep(.lf-mini-map) {
   z-index: 12;
-  padding: 6px;
-  padding-top: 28px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  padding: 0 !important;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+.canvas-wrap :deep(.lf-mini-map:hover) {
+  opacity: 1;
+}
+.canvas-wrap :deep(.lf-mini-map-graph) {
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 .canvas-wrap :deep(.lf-mini-map-header) {
-  margin: 4px 28px 4px 6px;
-  font-size: 12px;
-  line-height: 18px;
-  color: #64748b;
-  user-select: none;
+  display: none !important;
 }
 .canvas-wrap :deep(.lf-mini-map-close) {
   top: 6px;
   right: 6px;
-  width: 16px;
-  height: 16px;
-  opacity: 0.55;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.85);
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.canvas-wrap :deep(.lf-mini-map:hover .lf-mini-map-close) {
+  opacity: 0.85;
+  pointer-events: auto;
 }
 .canvas-wrap :deep(.lf-mini-map-close:hover) {
-  opacity: 1;
+  opacity: 1 !important;
+  background-color: #fff;
 }
 .canvas-wrap :deep(.lf-minimap-viewport) {
   background-color: rgba(37, 99, 235, 0.16);

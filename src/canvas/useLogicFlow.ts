@@ -93,7 +93,8 @@ export function useLogicFlow(
           width: 180,
           height: 120,
           showEdge: true,
-          isShowHeader: true,
+          // 无外框标题栏；关闭钮叠在缩略图内，悬停才显示（见 FlowCanvas 样式）
+          isShowHeader: false,
           isShowCloseIcon: true,
           rightPosition: 12,
           bottomPosition: 12,
