@@ -44,6 +44,9 @@ const emit = defineEmits<{
   run: []
   runOnly: []
   pickPath: []
+  /** 悬停工具条：供节点 hover 菜单取消延迟隐藏 */
+  barEnter: []
+  barLeave: []
 }>()
 
 const barRef = useTemplateRef<HTMLElement>('barRef')
@@ -98,6 +101,8 @@ defineExpose({
     :aria-label="resolvedAriaLabel"
     @mousedown.stop
     @click.stop
+    @mouseenter="emit('barEnter')"
+    @mouseleave="emit('barLeave')"
   >
     <el-tooltip
       v-for="key in visibleActions"

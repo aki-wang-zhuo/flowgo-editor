@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
- * 节点选中浮动操作栏：按钮集合由后端 ComponentDef.actions 声明。
+ * 节点悬停浮动操作栏：鼠标移入节点即显示，移出延迟隐藏。
+ * 与连线栏共用互斥状态，同一时刻只显示一个。
+ * 按钮集合由后端 ComponentDef.actions 声明。
  */
 import { computed, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { LfInstance } from '@/canvas/lf-types'
 import { cachedNodeActions } from '@/canvas/componentCatalog'
-import { useSelectionTools } from '@/canvas/useSelectionTools'
+import { useHoverTools } from '@/canvas/useHoverTools'
 import SelectionActionBar from './SelectionActionBar.vue'
 import {
   NODE_DEFAULT_ACTIONS,
@@ -47,18 +49,14 @@ const {
   pos,
   targetId,
   flipDown,
-  setDecide,
   setPlaceAt,
   setGetModel,
   watchLf,
-} = useSelectionTools({
+  onToolbarEnter,
+  onToolbarLeave,
+} = useHoverTools({
+  kind: 'node',
   existsInGraph: (lf, id) => !!lf?.graphModel?.getNodeModelById?.(id),
-})
-
-setDecide(({ nodes, edges }) => {
-  if (edges.length > 0) return null
-  if (nodes.length !== 1) return null
-  return { targetId: nodes[0].id }
 })
 
 setGetModel((lf, id) => lf?.graphModel?.getNodeModelById?.(id))
@@ -151,5 +149,7 @@ function onRunOnly() {
     @delete="onDelete"
     @run="onRun"
     @runOnly="onRunOnly"
+    @bar-enter="onToolbarEnter"
+    @bar-leave="onToolbarLeave"
   />
 </template>

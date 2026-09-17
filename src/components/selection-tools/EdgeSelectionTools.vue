@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 连线选中浮动操作栏。
+ * 连线悬停浮动操作栏（与节点栏共用互斥状态，同一时刻只显示一个）。
  * HTTP 出边：删除 / 运行 / 编辑调试值 / 重新选择路径（唯一带连线运行的边）。
  * 分支出边：删除 / 编辑源节点 / 重新选择分支。
  * 注入出边：删除 / 编辑（运行在节点栏）。
@@ -21,7 +21,7 @@ import {
   canRebindJsEdgeRelation,
   rebindJsEdgeRelation,
 } from '@/canvas/useJsTransformEdges'
-import { useSelectionTools } from '@/canvas/useSelectionTools'
+import { useHoverTools } from '@/canvas/useHoverTools'
 import HttpRouterDebugDialog from '@/components/editor/HttpRouterDebugDialog.vue'
 import SelectionActionBar from './SelectionActionBar.vue'
 import {
@@ -75,18 +75,14 @@ const {
   pos,
   targetId,
   flipDown,
-  setDecide,
   setPlaceAt,
   setGetModel,
   watchLf,
-} = useSelectionTools({
+  onToolbarEnter,
+  onToolbarLeave,
+} = useHoverTools({
+  kind: 'edge',
   existsInGraph: (lf, id) => !!lf?.graphModel?.getEdgeModelById?.(id),
-})
-
-setDecide(({ nodes, edges }) => {
-  if (nodes.length > 0) return null
-  if (edges.length !== 1) return null
-  return { targetId: edges[0].id }
 })
 
 setGetModel((lf, id) => lf?.graphModel?.getEdgeModelById?.(id))
@@ -145,7 +141,7 @@ function currentEdge(): {
   return model
 }
 
-/** 当前选中边是否来自 HTTP 入口 */
+/** 当前悬停边是否来自 HTTP 入口 */
 const isHttpEdge = computed(() => {
   const edge = currentEdge()
   if (!edge || !props.lf) return false
@@ -153,7 +149,7 @@ const isHttpEdge = computed(() => {
   return source?.type === 'httpEndpoint'
 })
 
-/** 当前选中边是否来自注入执行 */
+/** 当前悬停边是否来自注入执行 */
 const isInjectEdge = computed(() => {
   const edge = currentEdge()
   if (!edge || !props.lf) return false
@@ -161,7 +157,7 @@ const isInjectEdge = computed(() => {
   return source?.type === 'inject'
 })
 
-/** 当前选中边是否来自 IF / SWITCH 分支 */
+/** 当前悬停边是否来自 IF / SWITCH 分支 */
 const isBranchEdge = computed(() => {
   const edge = currentEdge()
   if (!edge || !props.lf) return false
@@ -321,6 +317,8 @@ async function onPickPath() {
     @delete="onDelete"
     @run="onRun"
     @pick-path="onPickPath"
+    @bar-enter="onToolbarEnter"
+    @bar-leave="onToolbarLeave"
   />
   <HttpRouterDebugDialog
     v-model="debugOpen"
