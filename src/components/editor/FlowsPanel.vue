@@ -388,6 +388,18 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
           >
             <span class="flows__dot" :class="{ 'is-open': isOpen(f.id) }" />
             <span class="flows__name">{{ f.name || f.id }}</span>
+            <span
+              v-if="!f.published"
+              class="flows__badge"
+              :title="t('flows.unpublished')"
+              >{{ t('flows.unpublished') }}</span
+            >
+            <span
+              v-else-if="f.unpublishedChanges"
+              class="flows__badge is-changes"
+              :title="t('flows.unpublishedChanges')"
+              >{{ t('flows.unpublishedChanges') }}</span
+            >
             <button
               class="flows__lock"
               type="button"
@@ -568,6 +580,18 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+.flows__badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #94a3b8;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.flows__badge.is-changes {
+  color: #e6a23c;
 }
 .flows__lock {
   display: inline-flex;

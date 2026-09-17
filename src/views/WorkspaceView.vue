@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import type { LfInstance } from '@/canvas/lf-types'
-import { getFlow, saveFlow, setFlowGroup, type FlowRecord } from '@/api/flow'
+import { getFlow, saveFlow, setFlowGroup, publishFlow, discardDraft, type FlowRecord } from '@/api/flow'
 import { getMcpSettings } from '@/api/settings'
 import { dslToGraph, graphToDsl } from '@/canvas/adapter'
 import { useTabPool } from '@/workspace/useTabPool'
@@ -33,7 +33,7 @@ import TabBar from '@/workspace/TabBar.vue'
 import LeftDock from '@/components/editor/LeftDock.vue'
 import FlowEditorPane from '@/components/editor/FlowEditorPane.vue'
 import PropertyPanel from '@/components/editor/PropertyPanel.vue'
-import CreateFlowDialog from '@/components/editor/CreateFlowDialog.vue'
+import PublishHistoryDialog from '@/components/editor/PublishHistoryDialog.vue'
 import LocaleSwitcher from '@/components/topbar/LocaleSwitcher.vue'
 import UserMenu from '@/components/topbar/UserMenu.vue'
 import SettingsDialog from '@/components/settings/SettingsDialog.vue'
@@ -54,6 +54,7 @@ const {
   markSaved,
   clearPendingGroup,
   setLocked,
+  setPublishMeta,
 } = useTabPool()
 
 const { leftWidth, rightWidth, startLeftResize, startRightResize } = usePanelLayout()
@@ -63,14 +64,31 @@ const lfByTab = ref<Record<string, LfInstance>>({})
 const selectedByTab = ref<Record<string, string | null>>({})
 
 const saving = ref(false)
+const publishing = ref(false)
 const refreshing = ref(false)
+const historyOpen = ref(false)
 const createVisible = ref(false)
 const settingsVisible = ref(false)
 /** MCP 全局开关：关闭时不连接编辑器 WebSocket */
 const mcpEnabled = ref(true)
 const dockRef = ref<InstanceType<typeof LeftDock> | null>(null)
-
 const openIds = computed(() => tabs.value.map((t) => t.id))
+
+function flowOpenOpts(rec: FlowRecord) {
+  return {
+    locked: !!rec.locked,
+    published: !!rec.published,
+    unpublishedChanges: !!rec.unpublishedChanges,
+  }
+}
+
+function applyRecordMeta(rec: FlowRecord) {
+  setLocked(rec.id, !!rec.locked)
+  setPublishMeta(rec.id, {
+    published: !!rec.published,
+    unpublishedChanges: !!rec.unpublishedChanges,
+  })
+}
 const activeLf = computed(() => {
   const id = activeId.value
   return id ? lfByTab.value[id] || null : null
@@ -109,7 +127,7 @@ async function reloadFlowFromServer(flowId: string, force = false): Promise<bool
       ElMessage.error(t('workspace.emptyDsl'))
       return false
     }
-    openDsl(full.dsl, { force, locked: !!full.locked })
+    openDsl(full.dsl, { force, ...flowOpenOpts(full) })
     dockRef.value?.upsertFlow(full)
     const lf = lfByTab.value[flowId]
     if (lf) {
@@ -168,7 +186,7 @@ function onWsFlowChanged(p: FlowChangedPayload) {
       try {
         const full = await getFlow(p.id)
         dockRef.value?.upsertFlow(full)
-        if (full.dsl) openDsl(full.dsl, { locked: !!full.locked })
+        if (full.dsl) openDsl(full.dsl, flowOpenOpts(full))
         else ElMessage.warning(t('workspace.mcpAddedEmptyDsl'))
       } catch {
         ElMessage.error(t('workspace.mcpLoadFailed'))
@@ -418,7 +436,7 @@ async function restoreLastActiveFlow() {
       writeLastActiveFlowId(null)
       return
     }
-    openDsl(full.dsl, { locked: !!full.locked })
+    openDsl(full.dsl, flowOpenOpts(full))
     dockRef.value?.upsertFlow(full)
   } catch {
     writeLastActiveFlowId(null)
@@ -481,7 +499,7 @@ async function openRecord(rec: FlowRecord) {
   if (!rec?.id) return
   if (peek(rec.id)) {
     activate(rec.id)
-    setLocked(rec.id, !!rec.locked)
+    applyRecordMeta(rec)
     syncLfLock(rec.id, !!rec.locked)
     return
   }
@@ -491,7 +509,7 @@ async function openRecord(rec: FlowRecord) {
       ElMessage.error(t('workspace.emptyDsl'))
       return
     }
-    openDsl(full.dsl, { locked: !!full.locked })
+    openDsl(full.dsl, flowOpenOpts(full))
     dockRef.value?.upsertFlow(full)
   } catch {
     ElMessage.error(t('workspace.openFailed'))
@@ -575,11 +593,11 @@ async function onRefresh(flowId?: string) {
   }
 }
 
-async function onSave(flowId?: string) {
+async function onSave(flowId?: string): Promise<boolean> {
   const id = flowId || activeId.value
   if (!id) {
     ElMessage.info(t('workspace.openOrCreateFirst'))
-    return
+    return false
   }
   if (id !== activeId.value) {
     activate(id)
@@ -587,14 +605,14 @@ async function onSave(flowId?: string) {
   const tab = peek(id)
   if (!tab) {
     ElMessage.info(t('workspace.openOrCreateFirst'))
-    return
+    return false
   }
   if (tab.locked) {
     ElMessage.warning(t('workspace.lockedCannotSave'))
-    return
+    return false
   }
   const pane = paneRefs.value[tab.id]
-  if (!pane) return
+  if (!pane) return false
   saving.value = true
   try {
     const graph = pane.getGraphData()
@@ -614,15 +632,116 @@ async function onSave(flowId?: string) {
       clearPendingGroup(tab.id)
     }
     markSaved(tab.id, dsl)
+    applyRecordMeta(saved)
     dockRef.value?.upsertFlow(saved)
     ElMessage.success(t('workspace.saved'))
+    return true
   } catch (e: unknown) {
     const msg =
       (e as { response?: { data?: { error?: string } } })?.response?.data?.error || t('common.saveFailed')
     ElMessage.error(msg)
+    return false
   } finally {
     saving.value = false
   }
+}
+
+async function onPublish(flowId?: string) {
+  const id = flowId || activeId.value
+  if (!id) {
+    ElMessage.info(t('workspace.openOrCreateFirst'))
+    return
+  }
+  const tab = peek(id)
+  if (!tab || tab.locked) {
+    ElMessage.warning(t('workspace.lockedCannotSave'))
+    return
+  }
+  if (tab.dirty) {
+    const ok = await onSave(id)
+    if (!ok) return
+  }
+  let note = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      t('workspace.publishNotePrompt'),
+      t('workspace.publishTitle'),
+      {
+        confirmButtonText: t('workspace.publishConfirm'),
+        cancelButtonText: t('common.cancel'),
+        inputPlaceholder: t('workspace.publishNotePlaceholder'),
+        inputValue: '',
+        inputValidator: () => true,
+      },
+    )
+    note = String(value || '').trim()
+  } catch {
+    return
+  }
+  publishing.value = true
+  try {
+    const rec = await publishFlow(id, note)
+    applyRecordMeta(rec)
+    dockRef.value?.upsertFlow(rec)
+    ElMessage.success(t('workspace.published'))
+  } catch (e: unknown) {
+    const msg =
+      (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+      t('workspace.publishFailed')
+    ElMessage.error(msg)
+  } finally {
+    publishing.value = false
+  }
+}
+
+async function onDiscardDraft(flowId?: string) {
+  const id = flowId || activeId.value
+  if (!id) return
+  const tab = peek(id)
+  if (!tab || tab.locked) {
+    ElMessage.warning(t('workspace.lockedCannotSave'))
+    return
+  }
+  if (!tab.published) {
+    ElMessage.warning(t('workspace.discardNeedPublished'))
+    return
+  }
+  try {
+    await ElMessageBox.confirm(t('workspace.discardConfirm'), t('workspace.discardTitle'), {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  publishing.value = true
+  try {
+    const rec = await discardDraft(id)
+    dockRef.value?.upsertFlow(rec)
+    await reloadFlowFromServer(id, true)
+    ElMessage.success(t('workspace.discarded'))
+  } catch (e: unknown) {
+    const msg =
+      (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+      t('workspace.discardFailed')
+    ElMessage.error(msg)
+  } finally {
+    publishing.value = false
+  }
+}
+
+function onHistory() {
+  if (!activeId.value) {
+    ElMessage.info(t('workspace.openOrCreateFirst'))
+    return
+  }
+  historyOpen.value = true
+}
+
+async function onRolledBack() {
+  const id = activeId.value
+  if (!id) return
+  await reloadFlowFromServer(id, false)
+  ElMessage.success(t('workspace.rolledBack'))
 }
 
 /** 画布快捷栏：保存/刷新当前面板对应流程 */
@@ -632,6 +751,14 @@ function onPaneSave(tabId: string) {
 
 function onPaneRefresh(tabId: string) {
   void onRefresh(tabId)
+}
+
+function onPanePublish(tabId: string) {
+  void onPublish(tabId)
+}
+
+function onPaneDiscard(tabId: string) {
+  void onDiscardDraft(tabId)
 }
 
 /** 快捷键：Ctrl+S 保存；Ctrl+Z 撤销；Ctrl+Shift+Z / Ctrl+Y 重做 */
@@ -755,13 +882,19 @@ function onComponentsChanged() {
           :active="tab.id === activeId"
           :dirty="tab.dirty"
           :locked="!!tab.locked"
+          :published="!!tab.published"
+          :unpublished-changes="!!tab.unpublishedChanges"
           :saving="saving && tab.id === activeId"
+          :publishing="publishing && tab.id === activeId"
           :refreshing="refreshing && tab.id === activeId"
           @ready="onPaneReady"
           @select-node="onSelectNode"
           @graph-change="onGraphChange"
           @save="onPaneSave"
           @refresh="onPaneRefresh"
+          @publish="onPanePublish"
+          @discard="onPaneDiscard"
+          @history="onHistory"
         />
         <div v-if="!tabs.length" class="center__empty">
           {{ t('workspace.emptyHint') }}
@@ -783,6 +916,12 @@ function onComponentsChanged() {
     </div>
 
     <CreateFlowDialog v-model="createVisible" @confirm="onCreateConfirm" />
+    <PublishHistoryDialog
+      v-model="historyOpen"
+      :flow-id="activeId || ''"
+      :locked="activeLocked"
+      @rolled-back="onRolledBack"
+    />
     <SettingsDialog
       v-model="settingsVisible"
       @components-changed="onComponentsChanged"

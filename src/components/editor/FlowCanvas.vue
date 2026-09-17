@@ -31,6 +31,9 @@ const props = defineProps<{
   refreshing?: boolean
   /** 流程锁定：画布静默模式，禁止编辑 */
   locked?: boolean
+  publishing?: boolean
+  published?: boolean
+  unpublishedChanges?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -40,6 +43,9 @@ const emit = defineEmits<{
   graphChange: []
   save: []
   refresh: []
+  publish: []
+  discard: []
+  history: []
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -235,9 +241,15 @@ defineExpose({ getGraphData, lf })
       :dirty="dirty"
       :saving="saving"
       :refreshing="refreshing"
+      :publishing="publishing"
       :locked="locked"
+      :published="published"
+      :unpublished-changes="unpublishedChanges"
       @save="emit('save')"
       @refresh="emit('refresh')"
+      @publish="emit('publish')"
+      @discard="emit('discard')"
+      @history="emit('history')"
     />
     <RunErrorBubble :lf="lf" />
     <NodeSelectionTools

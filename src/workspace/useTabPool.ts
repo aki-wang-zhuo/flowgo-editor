@@ -22,6 +22,10 @@ export interface EditorTab {
   revision: number
   /** 流程锁定：画布只读，禁止保存 */
   locked?: boolean
+  /** 已有线上发布版本 */
+  published?: boolean
+  /** 已保存草稿相对线上有未发布改动 */
+  unpublishedChanges?: boolean
   /**
    * 新建时选定的分组；首次保存成功后写入服务端并清空。
    * 空字符串 / undefined 表示未分组。
@@ -58,6 +62,8 @@ export function useTabPool() {
       entryNode: '',
       dirty: true,
       revision: 1,
+      published: false,
+      unpublishedChanges: true,
       dsl: emptyDsl(id, title),
       pendingGroupId: groupId || undefined,
     }
@@ -75,7 +81,12 @@ export function useTabPool() {
   /** 打开已有 DSL；已打开则仅激活。force 时覆盖本地内容（含脏编辑）。 */
   function openDsl(
     dsl: FlowDSL,
-    opts?: { force?: boolean; locked?: boolean },
+    opts?: {
+      force?: boolean
+      locked?: boolean
+      published?: boolean
+      unpublishedChanges?: boolean
+    },
   ): EditorTab {
     const exist = tabs.value.find((t) => t.id === dsl.id)
     if (exist) {
@@ -92,6 +103,12 @@ export function useTabPool() {
       if (opts?.locked !== undefined) {
         exist.locked = opts.locked
       }
+      if (opts?.published !== undefined) {
+        exist.published = opts.published
+      }
+      if (opts?.unpublishedChanges !== undefined) {
+        exist.unpublishedChanges = opts.unpublishedChanges
+      }
       activate(exist.id)
       return exist
     }
@@ -103,6 +120,8 @@ export function useTabPool() {
       dirty: false,
       revision: 1,
       locked: !!opts?.locked,
+      published: !!opts?.published,
+      unpublishedChanges: opts?.unpublishedChanges ?? !opts?.published,
       dsl: {
         ...dsl,
         nodes: [...(dsl.nodes || [])],
@@ -118,6 +137,18 @@ export function useTabPool() {
   function setLocked(id: string, locked: boolean) {
     const t = tabs.value.find((x) => x.id === id)
     if (t) t.locked = locked
+  }
+
+  function setPublishMeta(
+    id: string,
+    meta: { published?: boolean; unpublishedChanges?: boolean },
+  ) {
+    const t = tabs.value.find((x) => x.id === id)
+    if (!t) return
+    if (meta.published !== undefined) t.published = meta.published
+    if (meta.unpublishedChanges !== undefined) {
+      t.unpublishedChanges = meta.unpublishedChanges
+    }
   }
 
   /**
@@ -208,5 +239,6 @@ export function useTabPool() {
     markSaved,
     clearPendingGroup,
     setLocked,
+    setPublishMeta,
   }
 }

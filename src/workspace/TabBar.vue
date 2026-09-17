@@ -50,6 +50,15 @@ function commitRename() {
   if (name) emit('rename', id, name)
 }
 
+function tabTitle(tab: EditorTab) {
+  let s = tab.title
+  if (tab.locked) s += t('tabBar.lockedSuffix')
+  else if (!tab.published) s += t('tabBar.unpublishedSuffix')
+  else if (tab.unpublishedChanges) s += t('tabBar.unpublishedChangesSuffix')
+  else s += t('tabBar.renameHintSuffix')
+  return s
+}
+
 function onDblClick(tab: EditorTab) {
   emit('activate', tab.id)
   startRename(tab)
@@ -70,11 +79,7 @@ function onDblClick(tab: EditorTab) {
         }"
         role="tab"
         :aria-selected="tab.id === activeId"
-        :title="
-          tab.locked
-            ? tab.title + t('tabBar.lockedSuffix')
-            : tab.title + t('tabBar.renameHintSuffix')
-        "
+        :title="tabTitle(tab)"
         @click="emit('activate', tab.id)"
         @dblclick.stop="onDblClick(tab)"
         @mousedown.middle.prevent="emit('close', tab.id)"

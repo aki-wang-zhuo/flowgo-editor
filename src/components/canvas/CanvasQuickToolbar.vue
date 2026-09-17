@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * 画布右上角悬浮快捷栏：保存 / 刷新 / 显示全部 / 控制台。
- * 仅作用于当前画布所在流程。
+ * 画布右上角快捷栏：保存草稿 / 发布菜单 / 刷新 / 显示全部 / 控制台。
+ * 发布相关（发布、放弃草稿、发布历史）收在同一下拉菜单。
  */
 import { useI18n } from 'vue-i18n'
 import {
@@ -9,6 +9,7 @@ import {
   FullScreen,
   Monitor,
   Refresh,
+  Upload,
 } from '@element-plus/icons-vue'
 import type { LfInstance } from '@/canvas/lf-types'
 import {
@@ -19,21 +20,25 @@ import {
 const props = withDefaults(
   defineProps<{
     lf?: LfInstance | null
-    /** 当前流程是否有未保存更改 */
     dirty?: boolean
     saving?: boolean
     refreshing?: boolean
+    publishing?: boolean
     showConsole?: boolean
-    /** 锁定时禁用保存 */
     locked?: boolean
+    published?: boolean
+    unpublishedChanges?: boolean
   }>(),
   {
     lf: null,
     dirty: false,
     saving: false,
     refreshing: false,
+    publishing: false,
     showConsole: true,
     locked: false,
+    published: false,
+    unpublishedChanges: false,
   },
 )
 
@@ -42,13 +47,23 @@ const { t } = useI18n()
 const emit = defineEmits<{
   save: []
   refresh: []
+  publish: []
+  discard: []
+  history: []
 }>()
 
-/** 缩放并平移，使画布中全部节点可见 */
+const busy = () => props.saving || props.refreshing || props.publishing
+
 function fitAllNodes() {
   const lf = props.lf
   if (!lf?.fitView) return
   lf.fitView(40, 40)
+}
+
+function onPublishCommand(cmd: string) {
+  if (cmd === 'publish') emit('publish')
+  else if (cmd === 'discard') emit('discard')
+  else if (cmd === 'history') emit('history')
 }
 </script>
 
@@ -71,21 +86,54 @@ function fitAllNodes() {
         :icon="DocumentChecked"
         circle
         :loading="saving"
-        :disabled="saving || refreshing || locked"
+        :disabled="busy() || locked"
         @click="emit('save')"
       />
     </el-tooltip>
     <el-tooltip
-      :content="t('quickToolbar.refresh')"
+      :content="
+        locked
+          ? t('quickToolbar.publishLocked')
+          : t('quickToolbar.publishMenu')
+      "
       placement="bottom"
       :show-after="300"
     >
+      <el-dropdown
+        trigger="click"
+        :disabled="busy()"
+        @command="onPublishCommand"
+      >
+        <el-button
+          class="fg-quick-bar__btn"
+          :class="{ 'is-publish': unpublishedChanges || !published }"
+          :icon="Upload"
+          circle
+          :loading="publishing"
+          :disabled="busy()"
+        />
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="publish" :disabled="locked">
+              {{ t('quickToolbar.publish') }}
+            </el-dropdown-item>
+            <el-dropdown-item command="discard" :disabled="locked || !published">
+              {{ t('quickToolbar.discard') }}
+            </el-dropdown-item>
+            <el-dropdown-item command="history" :disabled="!published" divided>
+              {{ t('quickToolbar.history') }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </el-tooltip>
+    <el-tooltip :content="t('quickToolbar.refresh')" placement="bottom" :show-after="300">
       <el-button
         class="fg-quick-bar__btn"
         :icon="Refresh"
         circle
         :loading="refreshing"
-        :disabled="saving || refreshing"
+        :disabled="busy()"
         @click="emit('refresh')"
       />
     </el-tooltip>
@@ -142,7 +190,8 @@ function fitAllNodes() {
   background: #f1f5f9;
   color: #2563eb;
 }
-.fg-quick-bar__btn.is-dirty {
+.fg-quick-bar__btn.is-dirty,
+.fg-quick-bar__btn.is-publish {
   color: #e6a23c;
 }
 .fg-quick-bar__btn.is-disabled,
@@ -152,5 +201,8 @@ function fitAllNodes() {
 }
 .fg-quick-bar :deep(.el-button + .el-button) {
   margin-left: 0;
+}
+.fg-quick-bar :deep(.el-dropdown) {
+  display: inline-flex;
 }
 </style>

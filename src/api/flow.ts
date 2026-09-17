@@ -15,6 +15,12 @@ export interface FlowRecord {
   /** 是否设置了非空锁定密码（不回传密码） */
   hasLockPassword?: boolean
   dsl?: FlowDSL
+  /** 是否已有线上发布版本 */
+  published?: boolean
+  /** 草稿相对已发布有未发布改动 */
+  unpublishedChanges?: boolean
+  publishedAt?: string
+  publishedVersion?: number
   updatedAt: string
   createdAt: string
 }
@@ -29,9 +35,65 @@ export async function getFlow(id: string) {
   return data
 }
 
-/** 保存整份 FlowDSL（后端以 dsl.id 为业务主键） */
+/** 保存整份草稿 FlowDSL（不发布、不改线上入口） */
 export async function saveFlow(dsl: FlowDSL) {
   const { data } = await http.put<FlowRecord>('/flows', dsl)
+  return data
+}
+
+/** 将已保存草稿发布为线上版本 */
+export async function publishFlow(id: string, note?: string) {
+  const { data } = await http.post<FlowRecord>(
+    `/flows/${encodeURIComponent(id)}/publish`,
+    { note: note || '' },
+  )
+  return data
+}
+
+/** 放弃草稿，用已发布版本覆盖 */
+export async function discardDraft(id: string) {
+  const { data } = await http.post<FlowRecord>(
+    `/flows/${encodeURIComponent(id)}/discard-draft`,
+    {},
+  )
+  return data
+}
+
+export interface PublishHistoryItem {
+  version: number
+  note?: string
+  publishedAt: string
+}
+
+export interface PublishHistoryResp {
+  flowId: string
+  published: boolean
+  publishedVersion: number
+  unpublishedChanges: boolean
+  items: PublishHistoryItem[]
+}
+
+export async function listPublishHistory(id: string) {
+  const { data } = await http.get<PublishHistoryResp>(
+    `/flows/${encodeURIComponent(id)}/publish-history`,
+  )
+  return data
+}
+
+/** 回滚线上已发布版本；草稿不变 */
+export async function rollbackPublish(id: string, version: number) {
+  const { data } = await http.post<FlowRecord>(
+    `/flows/${encodeURIComponent(id)}/rollback`,
+    { version },
+  )
+  return data
+}
+
+/** 删除发布历史中的某版本；禁止删除当前线上版本 */
+export async function deletePublishHistory(id: string, version: number) {
+  const { data } = await http.delete<FlowRecord>(
+    `/flows/${encodeURIComponent(id)}/publish-history/${version}`,
+  )
   return data
 }
 
