@@ -204,9 +204,51 @@ export function useHoverTools(options: UseHoverToolsOptions) {
     if (id && targetId.value === id) hide()
   }
 
+  /** 连线：仅绑定路径中间文字块（.lf-line-text），不绑整条执行线 */
+  let edgeTextDomCleanups: Array<() => void> = []
+
+  const detachEdgeTextDom = () => {
+    edgeTextDomCleanups.forEach((fn) => fn())
+    edgeTextDomCleanups = []
+  }
+
+  const attachEdgeTextDom = (lf: LfInstance) => {
+    detachEdgeTextDom()
+    const container = lf.container as HTMLElement | undefined | null
+    if (!container) return
+
+    const onOver = (e: MouseEvent) => {
+      const text = (e.target as Element | null)?.closest?.('.lf-line-text')
+      if (!text) return
+      const fromText = (e.relatedTarget as Element | null)?.closest?.(
+        '.lf-line-text',
+      )
+      if (fromText === text) return
+      const id = text.getAttribute('data-edge-id')
+      if (id) showFor(id)
+    }
+    const onOut = (e: MouseEvent) => {
+      const text = (e.target as Element | null)?.closest?.('.lf-line-text')
+      if (!text) return
+      const to = e.relatedTarget as Node | null
+      if (to && text.contains(to)) return
+      const id = text.getAttribute('data-edge-id')
+      if (id && targetId.value && id !== targetId.value) return
+      scheduleHide()
+    }
+
+    container.addEventListener('mouseover', onOver)
+    container.addEventListener('mouseout', onOut)
+    edgeTextDomCleanups.push(() => {
+      container.removeEventListener('mouseover', onOver)
+      container.removeEventListener('mouseout', onOut)
+    })
+  }
+
   const detach = (lf: LfInstance | null) => {
     const target = lf || lastLf
     clearHideTimer()
+    detachEdgeTextDom()
     if (!target?.off) return
     Object.entries(boundHandlers).forEach(([name, handler]) => {
       target.off(name, handler)
@@ -220,13 +262,15 @@ export function useHoverTools(options: UseHoverToolsOptions) {
     hide()
     if (!lf) return
 
-    const enterEvt = kind === 'node' ? 'node:mouseenter' : 'edge:mouseenter'
-    const leaveEvt = kind === 'node' ? 'node:mouseleave' : 'edge:mouseleave'
-    const deleteEvt = kind === 'node' ? 'node:delete' : 'edge:delete'
-
-    boundHandlers[enterEvt] = onEnter as (...args: unknown[]) => void
-    boundHandlers[leaveEvt] = onLeave as (...args: unknown[]) => void
-    boundHandlers[deleteEvt] = onDelete as (...args: unknown[]) => void
+    if (kind === 'node') {
+      boundHandlers['node:mouseenter'] = onEnter as (...args: unknown[]) => void
+      boundHandlers['node:mouseleave'] = onLeave as (...args: unknown[]) => void
+      boundHandlers['node:delete'] = onDelete as (...args: unknown[]) => void
+    } else {
+      // 连线菜单只响应文字块 DOM 悬停，不监听 edge:mouseenter（整条线）
+      attachEdgeTextDom(lf)
+      boundHandlers['edge:delete'] = onDelete as (...args: unknown[]) => void
+    }
     boundHandlers['blank:click'] = () => hide()
     REPOSITION_EVENTS.forEach((evt) => {
       boundHandlers[evt] = () => {

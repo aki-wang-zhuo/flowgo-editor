@@ -1,6 +1,7 @@
 /**
- * FlowGo 贝塞尔连线：选中/悬停变色；路径标签白底 + 同色描边（盖住下方连线）。
- * 标签位置取曲线上的点；拖入插入时 insertHighlight 高亮。
+ * FlowGo 贝塞尔连线：选中变色；路径标签白底 + 同色描边（盖住下方连线）。
+ * 悬停路径不高亮；仅悬停中间文字块时标签变色，并供操作栏绑定。
+ * 拖入插入时 insertHighlight 高亮。
  */
 import { BezierEdge, BezierEdgeModel } from '@logicflow/core'
 import { cubicBezierPoint, INSERT_HIGHLIGHT_KEY, type BezierPoint } from '../bezier'
@@ -17,15 +18,13 @@ const COLOR_INSERT = '#409eff'
  */
 const FILL_BADGE = '#ffffff'
 
-/** 当前边应使用的描边色（与标签边框/文字色一致） */
+/** 当前边应使用的描边色（路径忽略 hover，仅选中 / 插入高亮） */
 function edgeStrokeColor(model: {
   isSelected?: boolean
-  isHovered?: boolean
   properties?: Record<string, unknown>
 }): string {
   if (model.properties?.[INSERT_HIGHLIGHT_KEY]) return COLOR_INSERT
   if (model.isSelected) return COLOR_SELECTED
-  if (model.isHovered) return COLOR_HOVER
   return COLOR_NORMAL
 }
 
@@ -84,8 +83,8 @@ class FlowEdgeModel extends BezierEdgeModel {
     const stroke = edgeStrokeColor(this)
     const inserting = !!this.properties?.[INSERT_HIGHLIGHT_KEY]
     style.stroke = stroke
-    style.strokeWidth =
-      inserting || this.isSelected || this.isHovered ? 3 : 2
+    // 路径悬停不加粗；仅选中 / 插入高亮加粗
+    style.strokeWidth = inserting || this.isSelected ? 3 : 2
     style.cursor = 'pointer'
     return style
   }
@@ -97,6 +96,7 @@ class FlowEdgeModel extends BezierEdgeModel {
     style.fontSize = 11
     style.cursor = 'pointer'
     style.background = badgeBackground(stroke)
+    // 文字块自身悬停色（LineText 本地 isHovered）；路径悬停不会驱动到此
     style.hover = {
       textWidth: style.textWidth ?? 100,
       fontSize: style.fontSize ?? 11,
@@ -127,7 +127,59 @@ class FlowEdgeModel extends BezierEdgeModel {
   }
 }
 
-class FlowEdgeView extends BezierEdge {}
+/**
+ * 视图：仅在指向中间文字块时进入 hover；给文字块打上 data-edge-id 供操作栏绑定。
+ */
+class FlowEdgeView extends BezierEdge {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructor(props?: any) {
+    super(props)
+    // 覆盖父类：悬停路径不再 setHovered / 不再同步文字 hover
+    this.setHoverOn = (ev: MouseEvent) => {
+      const t = ev?.target as Element | null
+      if (!t?.closest?.('.lf-line-text')) return
+      if (this.props.model.isHovered) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const textComp = this.textRef?.current as { setHoverOn?: () => void } | null
+      textComp?.setHoverOn?.()
+      this.handleHover(true, ev)
+    }
+    this.setHoverOff = (ev: MouseEvent) => {
+      if (!this.props.model.isHovered) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const textComp = this.textRef?.current as { setHoverOff?: () => void } | null
+      textComp?.setHoverOff?.()
+      this.handleHover(false, ev)
+    }
+  }
+
+  /** 在文字块 DOM 上写入边 id，供悬停操作栏识别 */
+  private stampTextEdgeId() {
+    const id = this.props?.model?.id
+    if (!id) return
+    // Preact 组件根节点
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const root = (this as any).base as Element | undefined
+    const textEl = root?.querySelector?.('.lf-line-text')
+    if (textEl instanceof Element) {
+      textEl.setAttribute('data-edge-id', String(id))
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  componentDidMount(...args: any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(BezierEdge.prototype as any).componentDidMount?.apply(this, args)
+    this.stampTextEdgeId()
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  componentDidUpdate(...args: any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(BezierEdge.prototype as any).componentDidUpdate?.apply(this, args)
+    this.stampTextEdgeId()
+  }
+}
 
 /** 注册到 LogicFlow 的边类型定义 */
 export const flowEdge = {
