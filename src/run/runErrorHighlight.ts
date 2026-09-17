@@ -101,6 +101,7 @@ export function showRunNodeError(
 
 /**
  * 根据一次模拟运行结果应用错误高亮；无错误则清除。
+ * 返回解析到的失败节点；Failure 被下游接住时 res.error 可能为空，但仍会从 logs[].err 解析。
  */
 export function applyRunResultErrors(
   lf: LfInstance,
@@ -109,11 +110,12 @@ export function applyRunResultErrors(
     logs?: Array<{ nodeId?: string; err?: string }>
     fallbackNodeId?: string
   },
-) {
+): RunNodeError | null {
   const resolved = resolveRunError(opts)
   if (!resolved) {
     clearRunErrors(lf)
-    return
+    return null
   }
   showRunNodeError(lf, resolved.nodeId, resolved.message)
+  return resolved
 }

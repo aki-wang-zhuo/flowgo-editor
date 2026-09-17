@@ -59,25 +59,24 @@ async function runInjectNode(ctx: NodeRunContext) {
     if (res.logs?.length) {
       appendServerDebugLogs(res.logs)
     }
-    if (res.error) {
+    const resolved = applyRunResultErrors(ctx.lf, {
+      error: res.error,
+      logs: res.logs,
+      fallbackNodeId: ctx.nodeId,
+    })
+    if (resolved) {
       if (debug) {
         appendConsoleLog({
           flowType: 'ERROR',
-          nodeId: ctx.nodeId,
+          nodeId: resolved.nodeId,
           nodeName,
           data: res.data || '',
-          err: res.error,
+          err: resolved.message,
         })
       }
-      applyRunResultErrors(ctx.lf, {
-        error: res.error,
-        logs: res.logs,
-        fallbackNodeId: ctx.nodeId,
-      })
-      ElMessage.error(res.error)
+      ElMessage.error(resolved.message)
       return
     }
-    clearRunErrors(ctx.lf)
     ElMessage.success(t('runners.inject.success'))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

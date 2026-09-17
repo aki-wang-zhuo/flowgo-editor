@@ -63,25 +63,24 @@ async function runHttpClientNode(ctx: NodeRunContext) {
     if (res.logs?.length) {
       appendServerDebugLogs(res.logs)
     }
-    if (res.error) {
+    const resolved = applyRunResultErrors(ctx.lf, {
+      error: res.error,
+      logs: res.logs,
+      fallbackNodeId: ctx.nodeId,
+    })
+    if (resolved) {
       if (debug) {
         appendConsoleLog({
           flowType: 'ERROR',
-          nodeId: ctx.nodeId,
+          nodeId: resolved.nodeId,
           nodeName,
           data: res.data || '',
-          err: res.error,
+          err: resolved.message,
         })
       }
-      applyRunResultErrors(ctx.lf, {
-        error: res.error,
-        logs: res.logs,
-        fallbackNodeId: ctx.nodeId,
-      })
-      ElMessage.error(res.error)
+      ElMessage.error(resolved.message)
       return
     }
-    clearRunErrors(ctx.lf)
     ElMessage.success(
       runOnly ? t('runners.httpClient.successOnly') : t('runners.httpClient.success'),
     )

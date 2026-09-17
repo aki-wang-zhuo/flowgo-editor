@@ -100,25 +100,24 @@ async function runHttpEndpointEdge(ctx: EdgeRunContext) {
         err: res.error,
       })
     }
-    if (res.error) {
+    const resolved = applyRunResultErrors(ctx.lf, {
+      error: res.error,
+      logs: res.logs,
+      fallbackNodeId: ctx.targetNodeId || ctx.sourceNodeId,
+    })
+    if (resolved) {
       if (httpDebug) {
         appendConsoleLog({
           flowType: 'ERROR',
-          nodeId: ctx.sourceNodeId,
+          nodeId: resolved.nodeId,
           nodeName: label,
           data: res.data || '',
-          err: res.error,
+          err: resolved.message,
         })
       }
-      applyRunResultErrors(ctx.lf, {
-        error: res.error,
-        logs: res.logs,
-        fallbackNodeId: ctx.targetNodeId || ctx.sourceNodeId,
-      })
-      ElMessage.error(res.error)
+      ElMessage.error(resolved.message)
       return
     }
-    clearRunErrors(ctx.lf)
     ElMessage.success(t('runners.httpEndpoint.success'))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
