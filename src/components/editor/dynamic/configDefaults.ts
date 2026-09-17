@@ -11,6 +11,11 @@ import {
   normalizeGlobalVarList,
   parseGlobalVarList,
 } from './globalVarList'
+import {
+  createDefaultSwitchCase,
+  normalizeSwitchCaseList,
+  parseSwitchCaseList,
+} from './switchCaseList'
 import { resolveWidget } from './resolveWidget'
 
 /** 将后端 Default 字符串按字段类型转为运行时值 */
@@ -22,6 +27,7 @@ export function parseFieldDefault(field: ConfigField): unknown {
     if (w === 'number') return 0
     if (w === 'router-list') return parseRouterList([])
     if (w === 'var-list') return parseGlobalVarList([])
+    if (w === 'case-list') return [createDefaultSwitchCase()]
     if (field.type === 'object') return {}
     if (field.type === 'array') return []
     return ''
@@ -32,6 +38,10 @@ export function parseFieldDefault(field: ConfigField): unknown {
   }
   if (w === 'var-list') {
     return parseGlobalVarList(raw)
+  }
+  if (w === 'case-list') {
+    const list = parseSwitchCaseList(raw)
+    return list.length ? list : [createDefaultSwitchCase()]
   }
   const t = (field.type || '').toLowerCase()
   if (t === 'boolean') {
@@ -83,6 +93,10 @@ export function readFieldDisplayValue(
   if (w === 'var-list') {
     return parseGlobalVarList(raw)
   }
+  if (w === 'case-list') {
+    const list = parseSwitchCaseList(raw)
+    return list.length ? list : [createDefaultSwitchCase()]
+  }
   if (w === 'code-json' || w === 'code-js') {
     if (typeof raw === 'string') return raw
     try {
@@ -121,6 +135,16 @@ export function writeFieldValue(field: ConfigField, uiValue: unknown): unknown {
         ? (uiValue as ReturnType<typeof parseGlobalVarList>)
         : parseGlobalVarList(uiValue),
     )
+  }
+  if (w === 'case-list') {
+    const list = normalizeSwitchCaseList(
+      Array.isArray(uiValue)
+        ? (uiValue as ReturnType<typeof parseSwitchCaseList>)
+        : parseSwitchCaseList(uiValue),
+    )
+    return list.length
+      ? list
+      : [{ value: 'a', type: 'string' as const, name: '' }]
   }
   if (w === 'switch') return !!uiValue
   if (w === 'number') {

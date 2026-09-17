@@ -9,7 +9,9 @@ import type { LfInstance } from '@/canvas/lf-types'
 import DynamicCodeField from './DynamicCodeField.vue'
 import RouterListField from './RouterListField.vue'
 import GlobalVarListField from './GlobalVarListField.vue'
+import SwitchCaseListField from './SwitchCaseListField.vue'
 import type { GlobalVarItem } from './globalVarList'
+import type { SwitchCaseRow } from './switchCaseList'
 import {
   readFieldDisplayValue,
   writeFieldValue,
@@ -73,6 +75,9 @@ function fieldLabel(f: ConfigField) {
   }
   if (resolveWidget(f) === 'var-list') {
     return t('forms.globalVars.listLabel')
+  }
+  if (resolveWidget(f) === 'case-list') {
+    return t('forms.switch.casesLabel')
   }
   return (f.description || '').trim() || f.name
 }
@@ -162,6 +167,12 @@ function onRouterListUpdate(f: ConfigField, v: HttpRouterItem[]) {
 
 /** 全局变量列表写回 */
 function onVarListUpdate(f: ConfigField, v: GlobalVarItem[]) {
+  local[f.name] = v
+  emitUp()
+}
+
+/** SWITCH cases 列表写回 */
+function onCaseListUpdate(f: ConfigField, v: SwitchCaseRow[]) {
   local[f.name] = v
   emitUp()
 }
@@ -275,6 +286,17 @@ defineExpose({ closeMaximize })
         <GlobalVarListField
           :model-value="(local[f.name] as GlobalVarItem[]) || []"
           @update:model-value="(v) => onVarListUpdate(f, v)"
+        />
+      </el-form-item>
+
+      <el-form-item
+        v-else-if="resolveWidget(f) === 'case-list'"
+        :label="fieldLabel(f)"
+        :required="f.required"
+      >
+        <SwitchCaseListField
+          :model-value="(local[f.name] as SwitchCaseRow[]) || []"
+          @update:model-value="(v) => onCaseListUpdate(f, v)"
         />
       </el-form-item>
 

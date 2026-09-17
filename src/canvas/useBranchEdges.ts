@@ -207,8 +207,8 @@ export function bindBranchEdgeRules(lf: LfInstance): () => void {
 /** 供表单默认 cases */
 export function defaultSwitchCases() {
   return [
-    { value: 'a', name: t('nodePalette.defaultBranchA') },
-    { value: 'b', name: t('nodePalette.defaultBranchB') },
+    { value: 'a', type: 'string' as const, name: t('nodePalette.defaultBranchA') },
+    { value: 'b', type: 'string' as const, name: t('nodePalette.defaultBranchB') },
   ]
 }
 

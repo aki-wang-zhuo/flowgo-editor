@@ -15,6 +15,7 @@ export type ConfigWidget =
   | 'select'
   | 'router-list'
   | 'var-list'
+  | 'case-list'
 
 /**
  * 是否应按「HTTP 路由列表」结构化编辑。
@@ -46,13 +47,28 @@ export function isRouterListField(field: ConfigField): boolean {
   return false
 }
 
+/** 是否应按 SWITCH cases 结构化列表编辑 */
+export function isCaseListField(field: ConfigField): boolean {
+  const w = (field.widget || '').trim()
+  if (w === 'case-list') return true
+  // 兼容旧 catalog：cases 数组
+  if (field.name === 'cases' && (field.type || '').toLowerCase() === 'array') {
+    return true
+  }
+  return false
+}
+
 /** 解析最终使用的 widget */
 export function resolveWidget(field: ConfigField): ConfigWidget {
   // 路由列表优先：即使后端标了 code-json 也走结构化编辑
   if (isRouterListField(field)) return 'router-list'
+  if (isCaseListField(field)) return 'case-list'
 
   const w = (field.widget || '').trim()
-  if (w === 'var-list' || (field.name === 'variables' && (field.type || '').toLowerCase() === 'array')) {
+  if (
+    w === 'var-list' ||
+    (field.name === 'variables' && (field.type || '').toLowerCase() === 'array')
+  ) {
     return 'var-list'
   }
   if (

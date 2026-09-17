@@ -20,9 +20,15 @@ export const forms = {
     expressionHint:
       '取值表达式使用 Go expr（非 JavaScript）。结果转字符串后与下方 value 比较；未命中走 Default。变量：msg / metadata / msgType / dataType / global.xxx；可补全。不支持格式化。',
     casesLabel: '分支 cases',
-    nameOptional: '名称（可选）',
+    nameOptional: '分支名称（可选）',
+    valuePlaceholder: '匹配值',
+    typeString: '字符串',
+    typeNumber: '数字',
+    typeBoolean: '布尔',
     addCase: '添加分支',
-    casesHint: '出边 relation 使用 value；另有固定出口 Default。',
+    casesHint:
+      '每行：匹配值、数据类型、分支名称。出边 relation 使用值的字符串形式；另有固定出口 Default。',
+    duplicateValue: '匹配值「{value}」已存在',
     defaultBranchA: '分支 A',
     defaultBranchB: '分支 B',
   },

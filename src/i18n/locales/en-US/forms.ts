@@ -20,9 +20,15 @@ export const forms = {
     expressionHint:
       'Value expression uses Go expr (not JavaScript). Result is string-compared to case values; unmatched goes to Default. Vars: msg / metadata / msgType / dataType / global.xxx; autocomplete available. Formatting is disabled.',
     casesLabel: 'Cases',
-    nameOptional: 'Name (optional)',
+    nameOptional: 'Branch name (optional)',
+    valuePlaceholder: 'Match value',
+    typeString: 'String',
+    typeNumber: 'Number',
+    typeBoolean: 'Boolean',
     addCase: 'Add case',
-    casesHint: 'Edge relation uses value; Default is always available.',
+    casesHint:
+      'Each row: match value, data type, branch name. Edge relation uses the string form of value; Default is always available.',
+    duplicateValue: 'Match value "{value}" already exists',
     defaultBranchA: 'Branch A',
     defaultBranchB: 'Branch B',
   },
