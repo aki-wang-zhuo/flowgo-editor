@@ -1,0 +1,21 @@
+/**
+ * 连线路径标签：白底描边徽章，整块可点选，禁用文本光标。
+ * 白底盖住下方连线，避免线穿字；文字 pointer-events:none，点击落到背景 rect。
+ */
+.lf-edge .lf-line-text {
+  cursor: pointer !important;
+}
+
+.lf-edge .lf-line-text rect {
+  cursor: pointer !important;
+  pointer-events: all;
+}
+
+/* 文字不拦截事件，点击落到下方背景 rect，整块徽章均可选中 */
+.lf-edge .lf-line-text .lf-element-text,
+.lf-edge .lf-line-text text,
+.lf-edge .lf-line-text tspan {
+  cursor: pointer !important;
+  user-select: none !important;
+  pointer-events: none;
+}

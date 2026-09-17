@@ -1,0 +1,17 @@
+/**
+ * Node-RED 风格锚点与节点辅助样式。
+ */
+.fg-nr-anchor {
+  stroke: #999;
+  stroke-width: 1;
+  fill: #fff;
+  cursor: crosshair;
+}
+.fg-nr-anchor:hover {
+  fill: #ff7f0e;
+  stroke: #ff7f0e;
+}
+
+.fg-nr-node {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.08));
+}

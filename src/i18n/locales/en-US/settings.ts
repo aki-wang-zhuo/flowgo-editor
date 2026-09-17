@@ -1,0 +1,56 @@
+/** Settings */
+export const settings = {
+  title: 'Settings',
+  navAria: 'Settings categories',
+  tab: {
+    nodes: 'Nodes',
+    mcp: 'MCP',
+    general: 'General',
+    appearance: 'Appearance',
+  },
+  comingSoon: 'Coming soon',
+  language: 'Language',
+  languageHint: 'Takes effect immediately and is remembered.',
+  nodes: {
+    title: 'Node management',
+    description: 'Disabled nodes are hidden from the palette and MCP list.',
+    loadPlugin: 'Load local plugin',
+    loadPluginAria: 'Load plugin',
+    marketplace: 'Install from marketplace',
+    marketplaceAria: 'Marketplace',
+    searchPlaceholder: 'Search by name / type',
+    empty: 'No nodes',
+    noMatch: 'No matches',
+    sourceBuiltin: 'Built-in',
+    sourcePlugin: 'Plugin',
+    sourceMarketplace: 'Marketplace',
+    loadFailed: 'Failed to load nodes',
+    saved: 'Node preferences saved',
+    pluginSoon: 'Plugin loading is coming soon',
+    pluginLoaded: 'Plugin loaded: {types}',
+    pluginLoadedSimple: 'Plugin loaded',
+    pluginFailed: 'Failed to load plugin',
+    disableTitle: 'Disable plugin',
+    disableConfirm:
+      'When disabled, the plugin nodes are hidden and not loaded, but files remain on the server. Continue?',
+    uninstallTitle: 'Uninstall plugin',
+    uninstallConfirm:
+      'Uninstall "{name}" and delete plugin files on the server. This cannot be undone. Continue?',
+    uninstall: 'Uninstall',
+    disabledOk: 'Plugin disabled',
+    enabledOk: 'Plugin enabled',
+    uninstalledOk: 'Plugin uninstalled',
+    marketSoon: 'Marketplace is coming soon',
+  },
+  mcp: {
+    title: 'MCP',
+    enabled: 'Enable MCP',
+    description:
+      'Disabling a capability rejects the related MCP tools. Turning off “Enable MCP” disables all MCP and disconnects the editor WebSocket.',
+    descriptionOff:
+      'MCP is off: endpoints unavailable and the editor will not connect WebSocket. Turn on and save to restore.',
+    noCapabilities: 'No MCP capability catalog',
+    loadFailed: 'Failed to load MCP settings',
+    saved: 'MCP settings saved',
+  },
+}

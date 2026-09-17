@@ -1,0 +1,72 @@
+/**
+ * 注册 FlowGo 画布节点（LogicFlow）。
+ * 入口节点仅右出、出口节点仅左入；中间节点左入右出。
+ * 可从左侧拉到对方右侧，随后翻转为出→入；禁止自环。
+ * httpEndpoint 出边受路径数限制；jsTransform / httpClient 最多两条（Success/Failure）。
+ */
+import LogicFlow from '@logicflow/core'
+import { NodeRedModel, NodeRedView } from './nodes/nodeRedStyle'
+import { HttpEndpointModel, HttpEndpointView } from './nodes/httpEndpointStyle'
+import { HttpResponseModel, HttpResponseView } from './nodes/httpResponseStyle'
+import { JsTransformModel, JsTransformView } from './nodes/jsTransformStyle'
+import { InjectModel, InjectView } from './nodes/injectStyle'
+import { flowEdge } from './edges/flowEdge'
+import './nodes/nodeRed.css'
+
+/**
+ * 向 LogicFlow 实例注册业务节点类型。
+ * @param types 后端返回的 type 列表；为空时至少注册 jsTransform 兜底
+ */
+export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
+  const set = new Set(types.length ? types : ['jsTransform'])
+  set.add('httpEndpoint')
+  set.add('httpResponse')
+  set.add('inject')
+  set.add('jsTransform')
+  set.add('httpClient')
+  set.add('if')
+  set.add('switch')
+
+  for (const type of set) {
+    if (type === 'httpEndpoint') {
+      lf.register({
+        type,
+        view: HttpEndpointView,
+        model: HttpEndpointModel,
+      })
+      continue
+    }
+    if (type === 'inject') {
+      lf.register({
+        type,
+        view: InjectView,
+        model: InjectModel,
+      })
+      continue
+    }
+    if (type === 'httpResponse') {
+      lf.register({
+        type,
+        view: HttpResponseView,
+        model: HttpResponseModel,
+      })
+      continue
+    }
+    // jsTransform / httpClient：共用双出边上限模型
+    if (type === 'jsTransform' || type === 'httpClient') {
+      lf.register({
+        type,
+        view: JsTransformView,
+        model: JsTransformModel,
+      })
+      continue
+    }
+    lf.register({
+      type,
+      view: NodeRedView,
+      model: NodeRedModel,
+    })
+  }
+  lf.register(flowEdge)
+  lf.setDefaultEdgeType('bezier')
+}

@@ -1,0 +1,113 @@
+/**
+ * English (US) message catalog.
+ */
+import { common } from './common'
+import { auth } from './auth'
+import { workspace } from './workspace'
+import { flows } from './flows'
+import { forms } from './forms'
+import { canvas } from './canvas'
+import { settings } from './settings'
+import { runners } from './runners'
+
+export const enUS = {
+  common,
+  auth,
+  workspace,
+  tabBar: {
+    ariaLabel: 'Flow tabs',
+    lockedSuffix: ' (locked)',
+    renameHintSuffix: ' (double-click to rename)',
+    closeAria: 'Close {title}',
+    newFlow: 'New flow',
+    emptyHint: 'Click + to create, or open a flow from the left',
+  },
+  leftDock: {
+    flows: 'My Flows',
+    nodes: 'Nodes',
+  },
+  flows,
+  createFlow: {
+    title: 'New flow',
+    name: 'Flow name',
+    group: 'Group',
+    groupPlaceholder: 'Ungrouped',
+  },
+  nodePalette: {
+    lockHint: 'Flow is locked; cannot add nodes',
+    searchPlaceholder: 'Search nodes',
+    expandAll: 'Expand all groups',
+    collapseAll: 'Collapse all groups',
+    loadFailed: 'Failed to load component catalog',
+    emptyMatch: 'No matching nodes',
+    empty: 'No nodes',
+    tip: 'Drag onto canvas; Alt+drag to box-select',
+    defaultBranchA: 'Branch A',
+    defaultBranchB: 'Branch B',
+  },
+  propertyPanel: {
+    title: 'Properties',
+    titleLocked: 'Properties (locked)',
+    type: 'Type',
+    name: 'Name',
+    debug: 'Debug',
+    debugHint: 'When on, request/response of this node is written to the console',
+    empty: 'Select a node on the canvas to edit properties',
+    noConfigFields: 'No configuration fields for this node',
+  },
+  forms,
+  canvas,
+  quickToolbar: {
+    aria: 'Canvas toolbar',
+    saveLocked: 'Flow is locked and cannot be saved',
+    saveDirty: 'Save current flow * (Ctrl+S)',
+    save: 'Save current flow (Ctrl+S)',
+    refresh: 'Refresh current flow from server (Ctrl+Shift+R)',
+    fitView: 'Fit all nodes',
+    hideConsole: 'Hide console',
+    showConsole: 'Show console',
+  },
+  console: {
+    resize: 'Drag to resize console',
+    title: 'Debug console',
+    autoClearTooltip: 'Clear logs automatically before each debug run',
+    autoClear: 'Auto clear',
+    clear: 'Clear logs',
+    close: 'Close console',
+    empty: 'No debug data yet',
+  },
+  runError: {
+    title: 'Node run failed',
+    close: 'Close',
+  },
+  selection: {
+    aria: 'Selection actions',
+    nodeAria: 'Node actions',
+    edgeAria: 'Edge actions',
+    edit: 'Edit',
+    delete: 'Delete',
+    run: 'Run',
+    runOnly: 'Run this node only',
+    pickPath: 'Reselect route',
+    edgeDelete: 'Delete edge',
+    edgeEditDebug: 'Edit debug value',
+    edgeEditSource: 'Edit (open source node properties)',
+    edgeReselectPath: 'Reselect route',
+    edgeReselectBranch: 'Reselect branch',
+    edgeToggleResult: 'Toggle Success / Failure',
+  },
+  settings,
+  userMenu: {
+    account: 'Account',
+    fallbackUser: 'User',
+    role: 'Role: {role}',
+    changePassword: 'Change password',
+    logout: 'Sign out',
+    oldPassword: 'Current password',
+    newPassword: 'New password',
+    passwordChanged: 'Password changed',
+    changeFailed: 'Failed to change password',
+    language: 'Language',
+  },
+  runners,
+}
