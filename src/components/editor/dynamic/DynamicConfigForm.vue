@@ -195,6 +195,7 @@ defineExpose({ closeMaximize })
         :model-value="String(local[f.name] ?? '')"
         :language="codeLanguage(f)"
         :height="codeHeight(f)"
+        :hint="(f.hint || '').trim() || undefined"
         @update:model-value="(v) => onCodeUpdate(f, v)"
       />
 

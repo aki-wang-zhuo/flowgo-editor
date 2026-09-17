@@ -20,4 +20,10 @@ export const runners = {
     consoleStart: '模拟请求 {method} {path}',
     success: '模拟请求已完成',
   },
+  jsTransform: {
+    unsupported: '仅支持 JS 转换节点',
+    defaultName: 'JS 转换',
+    consoleStart: 'JS 转换调试：使用测试值作为脚本入参并执行',
+    success: 'JS 转换执行完成',
+  },
 }

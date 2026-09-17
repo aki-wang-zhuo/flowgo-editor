@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
  * 连线选中浮动操作栏。
- * HTTP 出边：删除 / 运行 / 编辑调试值 / 重新选择路径。
- * 分支出边：删除 / 运行 / 编辑源节点 / 重新选择分支。
- * 注入出边：删除 / 编辑（无运行，运行在节点栏）。
- * JS 转换（仅 1 条出边）：删除 / 运行 / 编辑 / 切换 Success·Failure。
- * 其它连线：删除 / 运行 / 编辑（打开源节点属性）。
+ * HTTP 出边：删除 / 运行 / 编辑调试值 / 重新选择路径（唯一带连线运行的边）。
+ * 分支出边：删除 / 编辑源节点 / 重新选择分支。
+ * 注入出边：删除 / 编辑（运行在节点栏）。
+ * JS 转换（仅 1 条出边）：删除 / 编辑 / 切换 Success·Failure。
+ * 其它连线：删除 / 编辑（打开源节点属性）。
  */
 import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -206,7 +206,6 @@ const tooltips = computed(() => {
   if (isBranchEdge.value) {
     return {
       delete: t('selection.edgeDelete'),
-      run: t('selection.run'),
       edit: t('selection.edgeEditSource'),
       pickPath: t('selection.edgeReselectBranch'),
     }
@@ -214,14 +213,12 @@ const tooltips = computed(() => {
   if (isJsSingleEdge.value) {
     return {
       delete: t('selection.edgeDelete'),
-      run: t('selection.run'),
       edit: t('selection.edgeEditSource'),
       pickPath: t('selection.edgeToggleResult'),
     }
   }
   return {
     delete: t('selection.edgeDelete'),
-    run: t('selection.run'),
     edit: t('selection.edgeEditSource'),
   }
 })

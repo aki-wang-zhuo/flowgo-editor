@@ -7,6 +7,7 @@ import { dispatchRun } from './registry'
 import { registerHttpEndpointEdgeRunner } from './runners/httpEndpointEdge'
 import { registerInjectNodeRunner } from './runners/injectNode'
 import { registerHttpClientNodeRunner } from './runners/httpClientNode'
+import { registerJsTransformNodeRunner } from './runners/jsTransformNode'
 import type { EdgeRunContext, NodeRunContext } from './types'
 
 let inited = false
@@ -18,6 +19,7 @@ export function ensureRunnersRegistered() {
   registerHttpEndpointEdgeRunner()
   registerInjectNodeRunner()
   registerHttpClientNodeRunner()
+  registerJsTransformNodeRunner()
 }
 
 function snapshotDsl(

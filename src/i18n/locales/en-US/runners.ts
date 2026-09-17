@@ -20,4 +20,10 @@ export const runners = {
     consoleStart: 'Simulate {method} {path}',
     success: 'Simulation finished',
   },
+  jsTransform: {
+    unsupported: 'JS transform node only',
+    defaultName: 'JS Transform',
+    consoleStart: 'JS transform debug: run script with test value as msg',
+    success: 'JS transform finished',
+  },
 }

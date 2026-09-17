@@ -21,10 +21,9 @@ export const NODE_DEFAULT_ACTIONS: SelectionActionKey[] = [
   'runOnly',
 ]
 
-/** 普通连线：删除 / 运行 / 编辑 */
+/** 普通连线：删除 / 编辑（运行只出现在 HTTP 入口出边） */
 export const EDGE_PATH_ACTIONS: SelectionActionKey[] = [
   'delete',
-  'run',
   'edit',
 ]
 
@@ -39,18 +38,16 @@ export const EDGE_HTTP_ACTIONS: SelectionActionKey[] = [
   'pickPath',
 ]
 
-/** 分支节点出边：删除 / 运行 / 编辑源节点 / 重选分支 */
+/** 分支节点出边：删除 / 编辑源节点 / 重选分支 */
 export const EDGE_BRANCH_ACTIONS: SelectionActionKey[] = [
   'delete',
-  'run',
   'edit',
   'pickPath',
 ]
 
-/** JS 转换单出边：删除 / 运行 / 编辑 / 切换 Success·Failure */
+/** JS 转换单出边：删除 / 编辑 / 切换 Success·Failure */
 export const EDGE_JS_SINGLE_ACTIONS: SelectionActionKey[] = [
   'delete',
-  'run',
   'edit',
   'pickPath',
 ]

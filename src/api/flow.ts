@@ -137,3 +137,21 @@ export async function simulateHttpClient(
   )
   return data
 }
+
+/**
+ * JS 转换调试：用 debugValue 作为脚本 msg 入参，从该节点执行后续链路。
+ */
+export async function simulateJsTransform(
+  id: string,
+  payload: {
+    dsl?: FlowDSL
+    nodeId: string
+    body?: string
+  },
+) {
+  const { data } = await http.post<SimulateHttpRouteResult>(
+    `/flows/${encodeURIComponent(id)}/debug/js-transform`,
+    payload,
+  )
+  return data
+}
