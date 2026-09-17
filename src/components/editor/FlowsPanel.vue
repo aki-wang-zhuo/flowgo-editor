@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 左侧「我的流程」：按分组展示，支持分组 CRUD、流程删除与移组。
+ * 左侧「我的流程」：按分组展示，支持分组 CRUD、流程删除 / 移组 / 复制。
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -20,6 +20,8 @@ import {
   renameFlowGroup,
   type FlowGroup,
 } from '@/api/group'
+import FlowItemMoreMenu from '@/components/editor/flows/FlowItemMoreMenu.vue'
+import { duplicateFlowAsCopy } from '@/components/editor/flows/duplicateFlow'
 
 /** 未分组虚拟 id，仅用于折叠面板 name */
 const UNGROUPED = '__ungrouped__'
@@ -301,6 +303,39 @@ async function onMoveFlow(f: FlowRecord, groupId: string) {
   }
 }
 
+/** 生成副本显示名：原名称 + 后缀（中文 _副本 / 英文 _copy） */
+function copyDisplayName(f: FlowRecord) {
+  const base = (f.name || f.id).trim() || f.id
+  return `${base}${t('flows.copyNameSuffix')}`
+}
+
+/** 在当前分组创建副本 */
+async function onDuplicateFlow(f: FlowRecord) {
+  try {
+    const created = await duplicateFlowAsCopy(f.id, copyDisplayName(f), f.groupId || '')
+    upsert(created)
+    ElMessage.success(t('flows.copyCreated'))
+  } catch {
+    ElMessage.error(t('flows.copyFailed'))
+  }
+}
+
+/** 复制副本到指定分组（含未分组） */
+async function onCopyFlowTo(f: FlowRecord, groupId: string) {
+  try {
+    const created = await duplicateFlowAsCopy(f.id, copyDisplayName(f), groupId)
+    upsert(created)
+    // 目标组未展开时展开，便于看到新副本
+    const sectionId = groupId || UNGROUPED
+    if (!expanded.value.includes(sectionId)) {
+      expanded.value = [...expanded.value, sectionId]
+    }
+    ElMessage.success(t('flows.copyCreated'))
+  } catch {
+    ElMessage.error(t('flows.copyFailed'))
+  }
+}
+
 defineExpose({ reload, upsert, hasFlow, removeLocal })
 </script>
 
@@ -411,38 +446,13 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
                 <Unlock v-else />
               </el-icon>
             </button>
-            <el-dropdown
-              trigger="click"
-              @command="(cmd: string) => onMoveFlow(f, cmd)"
-            >
-              <button
-                class="flows__move"
-                type="button"
-                :title="t('flows.moveToGroup')"
-                @click.stop
-              >
-                ···
-              </button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="g in groups"
-                    :key="g.id"
-                    :command="g.id"
-                    :disabled="f.groupId === g.id"
-                  >
-                    {{ g.name }}
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    command=""
-                    :disabled="!f.groupId"
-                  >
-                    {{ t('common.ungrouped') }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            <FlowItemMoreMenu
+              :flow="f"
+              :groups="groups"
+              @move="(gid) => onMoveFlow(f, gid)"
+              @duplicate="onDuplicateFlow(f)"
+              @copy-to="(gid) => onCopyFlowTo(f, gid)"
+            />
             <button
               class="flows__x"
               type="button"
@@ -618,23 +628,6 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
 .flows__lock:hover {
   color: #409eff;
   background: rgba(64, 158, 255, 0.12);
-}
-.flows__move {
-  display: none;
-  border: none;
-  background: transparent;
-  color: #888;
-  cursor: pointer;
-  padding: 0 2px;
-  font-size: 12px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.flows__item:hover .flows__move {
-  display: inline-block;
-}
-.flows__move:hover {
-  color: #409eff;
 }
 .flows__x {
   display: none;
