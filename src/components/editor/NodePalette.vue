@@ -129,6 +129,18 @@ function outPortCount(item: PaletteItem): number {
 
 function onMouseDown(item: PaletteItem, lf: LfInstance | null) {
   if (!lf || props.disabled) return
+
+  // 全流程最多一个全局变量节点
+  if (item.type === 'globalVars') {
+    const data = (lf.getGraphData?.() || { nodes: [] }) as {
+      nodes?: Array<{ type?: string }>
+    }
+    if ((data.nodes || []).some((n) => n.type === 'globalVars')) {
+      ElMessage.warning(t('nodePalette.globalVarsExists'))
+      return
+    }
+  }
+
   markPaletteDndActive()
   const clear = () => {
     clearPaletteDndActive()

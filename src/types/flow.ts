@@ -42,7 +42,7 @@ export interface ConfigField {
   /** 开关旁补充说明 */
   hint?: string
   /**
-   * text | textarea | code-json | code-js | switch | number | router-list；
+   * text | textarea | code-json | code-js | switch | number | router-list | var-list；
    * 空则按 type 推断。routers 数组即使标 code-json 也会被前端识别为 router-list。
    */
   widget?: string

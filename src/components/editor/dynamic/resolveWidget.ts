@@ -13,6 +13,7 @@ export type ConfigWidget =
   | 'switch'
   | 'number'
   | 'router-list'
+  | 'var-list'
 
 /**
  * 是否应按「HTTP 路由列表」结构化编辑。
@@ -50,6 +51,9 @@ export function resolveWidget(field: ConfigField): ConfigWidget {
   if (isRouterListField(field)) return 'router-list'
 
   const w = (field.widget || '').trim()
+  if (w === 'var-list' || (field.name === 'variables' && (field.type || '').toLowerCase() === 'array')) {
+    return 'var-list'
+  }
   if (
     w === 'text' ||
     w === 'textarea' ||

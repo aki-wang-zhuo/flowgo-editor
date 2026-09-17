@@ -11,14 +11,14 @@ export const forms = {
   },
   if: {
     expressionLabel: '条件表达式 (expression)',
-    hint: 'Go expr 布尔表达式。变量：msg、metadata、msgType、dataType。成立 → True，否则 → False。',
+    hint: 'Go expr 布尔表达式。变量：msg、metadata、msgType、dataType、global。成立 → True，否则 → False。',
     maximizeAria: '条件表达式全屏编辑',
     maximizeTitle: '条件表达式',
   },
   switch: {
     expressionLabel: '取值表达式 (expression)',
     expressionHint:
-      '结果转字符串后与下方 value 比较；未命中走 Default。变量：msg / metadata / msgType / dataType',
+      '结果转字符串后与下方 value 比较；未命中走 Default。变量：msg / metadata / msgType / dataType / global',
     casesLabel: '分支 cases',
     nameOptional: '名称（可选）',
     addCase: '添加分支',
@@ -107,5 +107,16 @@ export const forms = {
     description: '仅用于编辑器调试模拟，不会出现在真实 HTTP 请求中。请填写 JSON 对象。',
     invalidJson: 'JSON 格式不正确',
     needObject: '调试值需为 JSON 对象（如 {"key":"value"}）',
+  },
+  globalVars: {
+    listLabel: '变量列表',
+    add: '添加变量',
+    remove: '删除',
+    namePlaceholder: '变量名',
+    valuePlaceholder: '值',
+    typeString: '字符串',
+    typeNumber: '数字',
+    typeBoolean: '布尔',
+    typeJson: 'JSON',
   },
 }

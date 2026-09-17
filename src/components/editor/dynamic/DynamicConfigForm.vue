@@ -7,6 +7,8 @@ import { useI18n } from 'vue-i18n'
 import type { ConfigField } from '@/types/flow'
 import DynamicCodeField from './DynamicCodeField.vue'
 import RouterListField from './RouterListField.vue'
+import GlobalVarListField from './GlobalVarListField.vue'
+import type { GlobalVarItem } from './globalVarList'
 import {
   readFieldDisplayValue,
   writeFieldValue,
@@ -65,6 +67,9 @@ function fieldLabel(f: ConfigField) {
   if (resolveWidget(f) === 'router-list') {
     return t('forms.httpEndpoint.routers')
   }
+  if (resolveWidget(f) === 'var-list') {
+    return t('forms.globalVars.listLabel')
+  }
   return (f.description || '').trim() || f.name
 }
 
@@ -120,6 +125,12 @@ function onCodeUpdate(f: ConfigField, v: string) {
 
 /** 路由列表结构化编辑写回（始终为对象数组，不再走 JSON 文本） */
 function onRouterListUpdate(f: ConfigField, v: HttpRouterItem[]) {
+  local[f.name] = v
+  emitUp()
+}
+
+/** 全局变量列表写回 */
+function onVarListUpdate(f: ConfigField, v: GlobalVarItem[]) {
   local[f.name] = v
   emitUp()
 }
@@ -199,6 +210,17 @@ defineExpose({ closeMaximize })
         <RouterListField
           :model-value="local[f.name]"
           @update:model-value="(v) => onRouterListUpdate(f, v)"
+        />
+      </el-form-item>
+
+      <el-form-item
+        v-else-if="resolveWidget(f) === 'var-list'"
+        :label="fieldLabel(f)"
+        :required="f.required"
+      >
+        <GlobalVarListField
+          :model-value="(local[f.name] as GlobalVarItem[]) || []"
+          @update:model-value="(v) => onVarListUpdate(f, v)"
         />
       </el-form-item>
 

@@ -11,14 +11,14 @@ export const forms = {
   },
   if: {
     expressionLabel: 'Condition (expression)',
-    hint: 'Go expr boolean. Vars: msg, metadata, msgType, dataType. True → True branch, else → False.',
+    hint: 'Go expr boolean. Vars: msg, metadata, msgType, dataType, global. True → True branch, else → False.',
     maximizeAria: 'Edit expression fullscreen',
     maximizeTitle: 'Condition',
   },
   switch: {
     expressionLabel: 'Value expression',
     expressionHint:
-      'Result is string-compared to case values; unmatched goes to Default. Vars: msg / metadata / msgType / dataType',
+      'Result is string-compared to case values; unmatched goes to Default. Vars: msg / metadata / msgType / dataType / global',
     casesLabel: 'Cases',
     nameOptional: 'Name (optional)',
     addCase: 'Add case',
@@ -109,5 +109,16 @@ export const forms = {
     description: 'Editor-only debug payload; not sent on real HTTP. Use a JSON object.',
     invalidJson: 'Invalid JSON',
     needObject: 'Debug value must be a JSON object (e.g. {"key":"value"})',
+  },
+  globalVars: {
+    listLabel: 'Variables',
+    add: 'Add variable',
+    remove: 'Remove',
+    namePlaceholder: 'Name',
+    valuePlaceholder: 'Value',
+    typeString: 'String',
+    typeNumber: 'Number',
+    typeBoolean: 'Boolean',
+    typeJson: 'JSON',
   },
 }

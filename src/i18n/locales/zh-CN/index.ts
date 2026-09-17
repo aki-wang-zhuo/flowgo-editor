@@ -49,6 +49,7 @@ export const zhCN = {
     tip: '拖到画布添加；Alt+拖拽框选',
     defaultBranchA: '分支 A',
     defaultBranchB: '分支 B',
+    globalVarsExists: '流程中已存在全局变量节点，每个流程最多只能有一个',
   },
   propertyPanel: {
     title: '属性',

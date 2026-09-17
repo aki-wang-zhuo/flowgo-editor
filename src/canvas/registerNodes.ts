@@ -10,6 +10,7 @@ import { HttpEndpointModel, HttpEndpointView } from './nodes/httpEndpointStyle'
 import { HttpResponseModel, HttpResponseView } from './nodes/httpResponseStyle'
 import { JsTransformModel, JsTransformView } from './nodes/jsTransformStyle'
 import { InjectModel, InjectView } from './nodes/injectStyle'
+import { GlobalVarsModel, GlobalVarsView } from './nodes/globalVarsStyle'
 import { flowEdge } from './edges/flowEdge'
 import './nodes/nodeRed.css'
 
@@ -26,6 +27,7 @@ export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
   set.add('httpClient')
   set.add('if')
   set.add('switch')
+  set.add('globalVars')
 
   for (const type of set) {
     if (type === 'httpEndpoint') {
@@ -49,6 +51,14 @@ export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
         type,
         view: HttpResponseView,
         model: HttpResponseModel,
+      })
+      continue
+    }
+    if (type === 'globalVars') {
+      lf.register({
+        type,
+        view: GlobalVarsView,
+        model: GlobalVarsModel,
       })
       continue
     }

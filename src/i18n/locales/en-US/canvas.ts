@@ -26,6 +26,7 @@ export const canvas = {
     entryNoIncoming: 'Entry nodes have no incoming edges',
     exitNoOutgoing: 'Exit nodes have no outgoing edges',
     maxOutgoing: 'Maximum outgoing edges reached',
+    noPortsNode: 'This node has no ports and cannot be connected',
   },
   insertNode: {
     message:

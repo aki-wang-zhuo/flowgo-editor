@@ -26,6 +26,7 @@ export const canvas = {
     entryNoIncoming: '入口节点无入边',
     exitNoOutgoing: '出口节点无出边',
     maxOutgoing: '出边数已达上限',
+    noPortsNode: '该节点无连接端口，不能连线',
   },
   insertNode: {
     message:

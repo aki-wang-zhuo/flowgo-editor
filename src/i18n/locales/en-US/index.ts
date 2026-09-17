@@ -49,6 +49,7 @@ export const enUS = {
     tip: 'Drag onto canvas; Alt+drag to box-select',
     defaultBranchA: 'Branch A',
     defaultBranchB: 'Branch B',
+    globalVarsExists: 'A global variables node already exists; only one is allowed per flow',
   },
   propertyPanel: {
     title: 'Properties',
