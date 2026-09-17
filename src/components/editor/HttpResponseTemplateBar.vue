@@ -6,14 +6,17 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, DocumentAdd, DocumentChecked, FolderOpened } from '@element-plus/icons-vue'
+import { Delete, DocumentAdd, DocumentChecked, FolderOpened, Refresh } from '@element-plus/icons-vue'
 import {
   addHttpResponseTemplate,
   deleteHttpResponseTemplate,
-  listHttpResponseTemplates,
   updateHttpResponseTemplate,
   type HttpResponseCustomTemplate,
 } from '@/api/settings'
+import {
+  loadHttpResponseTemplates,
+  setHttpResponseTemplates,
+} from './httpResponseTemplateCache'
 import {
   HTTP_RESPONSE_TEMPLATE_IDS,
   getHttpResponseTemplate,
@@ -36,6 +39,7 @@ const pick = ref('')
 const custom = ref<HttpResponseCustomTemplate[]>([])
 const manageOpen = ref(false)
 const saving = ref(false)
+const refreshing = ref(false)
 
 /** 当前选中是否为自定义模板 */
 const selectedCustom = computed(() =>
@@ -56,17 +60,37 @@ function apiErr(e: unknown) {
   return ax.response?.data?.error || ax.message || t('forms.httpResponse.templateSaveFailed')
 }
 
-async function reloadCustom() {
+/** 装载自定义模板：默认走本地缓存；force 打服务器 */
+async function reloadCustom(force = false) {
   try {
-    custom.value = await listHttpResponseTemplates()
+    custom.value = await loadHttpResponseTemplates(force)
   } catch (e) {
     ElMessage.error(apiErr(e))
   }
 }
 
 onMounted(() => {
-  void reloadCustom()
+  void reloadCustom(false)
 })
+
+/** 打开模板管理时从服务器拉最新列表 */
+function openManage() {
+  manageOpen.value = true
+  void reloadCustom(true)
+}
+
+/** 手动刷新：拉服务器并覆盖本地缓存 */
+async function onRefresh() {
+  refreshing.value = true
+  try {
+    custom.value = await loadHttpResponseTemplates(true)
+    ElMessage.success(t('forms.httpResponse.templateRefreshed'))
+  } catch (e) {
+    ElMessage.error(apiErr(e))
+  } finally {
+    refreshing.value = false
+  }
+}
 
 async function confirmOverwriteBody() {
   if (!httpResponseBodyHasContent(props.body)) return true
@@ -130,6 +154,7 @@ async function onOverwriteSave() {
       body: props.body || '',
     })
     custom.value = custom.value.map((c) => (c.id === updated.id ? updated : c))
+    setHttpResponseTemplates(custom.value)
     ElMessage.success(t('forms.httpResponse.templateOverwriteSaved'))
   } catch (e) {
     ElMessage.error(apiErr(e))
@@ -163,6 +188,7 @@ async function onSaveAsNew() {
       body: props.body || '',
     })
     custom.value = [...custom.value, created]
+    setHttpResponseTemplates(custom.value)
     pick.value = created.id
     ElMessage.success(t('forms.httpResponse.templateSaved'))
   } catch (e) {
@@ -185,6 +211,7 @@ async function onDeleteCustom(id: string) {
       },
     )
     custom.value = await deleteHttpResponseTemplate(id)
+    setHttpResponseTemplates(custom.value)
     if (pick.value === id) pick.value = ''
     ElMessage.success(t('forms.httpResponse.templateDeleted'))
   } catch (e) {
@@ -225,6 +252,21 @@ async function onDeleteCustom(id: string) {
         />
       </el-option-group>
     </el-select>
+    <el-tooltip
+      :content="t('forms.httpResponse.templateRefresh')"
+      placement="top"
+      :show-after="300"
+    >
+      <button
+        type="button"
+        class="tpl-bar__btn"
+        :aria-label="t('forms.httpResponse.templateRefresh')"
+        :disabled="refreshing || saving"
+        @click="onRefresh"
+      >
+        <el-icon :size="14" :class="{ 'is-loading': refreshing }"><Refresh /></el-icon>
+      </button>
+    </el-tooltip>
     <el-tooltip :content="overwriteSaveTooltip" placement="top" :show-after="300">
       <span class="tpl-bar__btn-wrap">
         <button
@@ -254,8 +296,7 @@ async function onDeleteCustom(id: string) {
         type="button"
         class="tpl-bar__btn"
         :aria-label="t('forms.httpResponse.templateManage')"
-        :disabled="!custom.length"
-        @click="manageOpen = true"
+        @click="openManage"
       >
         <el-icon :size="14"><FolderOpened /></el-icon>
       </button>
@@ -322,6 +363,14 @@ async function onDeleteCustom(id: string) {
 .tpl-bar__btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.tpl-bar__btn .is-loading {
+  animation: tpl-spin 0.8s linear infinite;
+}
+@keyframes tpl-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .tpl-bar__empty {
   margin: 0;

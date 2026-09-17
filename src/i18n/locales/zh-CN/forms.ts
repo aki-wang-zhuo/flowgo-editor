@@ -91,6 +91,8 @@ export const forms = {
     templateSaveFailed: '保存模板失败',
     templateManage: '管理我的模板',
     templateManageEmpty: '还没有自定义模板',
+    templateRefresh: '从服务器刷新模板',
+    templateRefreshed: '模板列表已刷新',
     templateDeleteTitle: '删除模板',
     templateDeleteConfirm: '确定删除该自定义模板？',
     templateDeleted: '已删除模板',

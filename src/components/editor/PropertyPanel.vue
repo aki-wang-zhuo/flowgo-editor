@@ -12,13 +12,13 @@ import { cachedComponentMeta, catalogVersion } from '@/canvas/componentCatalog'
 import {
   componentDocVersion,
   loadComponentDoc,
+  peekComponentDoc,
 } from '@/canvas/componentDocCache'
 import { syncHttpEndpointNode } from '@/canvas/useHttpEndpointEdges'
 import { syncSwitchNode } from '@/canvas/useBranchEdges'
 import type { ConfigField } from '@/types/flow'
 import DynamicConfigForm from './dynamic/DynamicConfigForm.vue'
 import MarkdownView from '@/components/common/MarkdownView.vue'
-import { currentLocale } from '@/i18n'
 
 const props = defineProps<{
   lf: LfInstance | null
@@ -66,13 +66,13 @@ watch(
     dynFormRef.value?.closeMaximize?.()
     // 无选中时文档 Tab 禁用，强制回到属性
     if (!id) activeTab.value = 'props'
-    docText.value = ''
     docError.value = ''
     if (!id || !props.lf) {
       form.name = ''
       form.type = ''
       form.debug = false
       form.configuration = {}
+      docText.value = ''
       return
     }
     const model = props.lf.getNodeModelById(id)
@@ -83,13 +83,19 @@ watch(
     form.configuration = {
       ...((model.properties?.configuration as Record<string, unknown>) || {}),
     }
+    // 同类型切换时 form.type 不变，watch(type) 不会重跑；在文档 Tab 主动回填缓存
+    if (activeTab.value === 'doc' && form.type) {
+      void fetchDoc(false)
+    } else {
+      docText.value = ''
+    }
   },
   { immediate: true },
 )
 
-/** 切入文档 Tab 或类型/语言变化时加载（命中缓存则不打网） */
+/** 切入文档 Tab / 换类型 / 缓存失效时加载 */
 watch(
-  [activeTab, () => form.type, currentLocale, componentDocVersion],
+  [activeTab, () => form.type, componentDocVersion],
   ([tab, type]) => {
     if (tab !== 'doc' || !type) return
     void fetchDoc(false)
@@ -101,6 +107,15 @@ async function fetchDoc(force: boolean) {
   if (!type) {
     docText.value = ''
     return
+  }
+  // 同类型优先缓存，不闪 loading
+  if (!force) {
+    const cached = peekComponentDoc(type)
+    if (cached != null) {
+      docText.value = cached
+      docError.value = ''
+      return
+    }
   }
   docLoading.value = true
   docError.value = ''

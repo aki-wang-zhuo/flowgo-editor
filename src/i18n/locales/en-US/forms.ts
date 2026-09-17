@@ -93,6 +93,8 @@ export const forms = {
     templateSaveFailed: 'Failed to save template',
     templateManage: 'Manage my templates',
     templateManageEmpty: 'No custom templates yet',
+    templateRefresh: 'Refresh templates from server',
+    templateRefreshed: 'Template list refreshed',
     templateDeleteTitle: 'Delete template',
     templateDeleteConfirm: 'Delete this custom template?',
     templateDeleted: 'Template deleted',
