@@ -136,33 +136,32 @@ class FlowEdgeModel extends BezierEdgeModel {
 
 /**
  * 视图：仅在指向中间文字块时进入 hover；给文字块打上 data-edge-id 供操作栏绑定。
+ * BaseEdge 构造函数类型为 0 参，故不用 super(props)；用字段覆盖悬停逻辑
+ *（在父类构造赋值之后初始化，可正确覆盖）。
  */
 class FlowEdgeView extends BezierEdge {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  constructor(props?: any) {
-    super(props);
-    // 覆盖父类：悬停路径不再 setHovered / 不再同步文字 hover
-    this.setHoverOn = (ev: MouseEvent) => {
-      const t = ev?.target as Element | null;
-      if (!t?.closest?.(".lf-line-text")) return;
-      if (this.props.model.isHovered) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textComp = this.textRef?.current as {
-        setHoverOn?: () => void;
-      } | null;
-      textComp?.setHoverOn?.();
-      this.handleHover(true, ev);
-    };
-    this.setHoverOff = (ev: MouseEvent) => {
-      if (!this.props.model.isHovered) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textComp = this.textRef?.current as {
-        setHoverOff?: () => void;
-      } | null;
-      textComp?.setHoverOff?.();
-      this.handleHover(false, ev);
-    };
-  }
+  /** 覆盖父类：悬停路径不再 setHovered / 不再同步文字 hover */
+  setHoverOn = (ev: MouseEvent) => {
+    const t = ev?.target as Element | null;
+    if (!t?.closest?.(".lf-line-text")) return;
+    if (this.props.model.isHovered) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const textComp = this.textRef?.current as {
+      setHoverOn?: () => void;
+    } | null;
+    textComp?.setHoverOn?.();
+    this.handleHover(true, ev);
+  };
+
+  setHoverOff = (ev: MouseEvent) => {
+    if (!this.props.model.isHovered) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const textComp = this.textRef?.current as {
+      setHoverOff?: () => void;
+    } | null;
+    textComp?.setHoverOff?.();
+    this.handleHover(false, ev);
+  };
 
   /** 在文字块 DOM 上写入边 id，供悬停操作栏识别 */
   private stampTextEdgeId() {
