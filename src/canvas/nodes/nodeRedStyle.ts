@@ -50,6 +50,7 @@ export class NodeRedModel extends RectNodeModel {
   }
 
   setAttributes() {
+    const prevW = this.width
     const label =
       (this.properties?.name as string) || this.text?.value || this.type || ''
     const textW = estimateTextWidth(label)
@@ -59,11 +60,52 @@ export class NodeRedModel extends RectNodeModel {
     this.height = HEIGHT
     this.text.x = this.x + ICON_W / 2
     this.text.y = this.y
+    // 宽度变化后左右锚点位移，需同步刷新入边/出边端点，避免线被节点盖住或悬空
+    if (prevW !== width) {
+      this.refreshConnectedEdgeAnchors()
+    }
   }
 
   updateText(val: string) {
     super.updateText(val)
     this.setAttributes()
+  }
+
+  /**
+   * 按当前 anchors 重绑所有相连边的起终点（改名导致变宽时调用）。
+   */
+  refreshConnectedEdgeAnchors() {
+    const gm = this.graphModel as
+      | {
+          getNodeEdges?: (id: string) => Array<{
+            sourceNodeId?: string
+            targetNodeId?: string
+            sourceAnchorId?: string
+            targetAnchorId?: string
+            updateStartPoint?: (p: { x: number; y: number }) => void
+            updateEndPoint?: (p: { x: number; y: number }) => void
+          }>
+        }
+      | undefined
+    if (!gm?.getNodeEdges) return
+    const edges = gm.getNodeEdges(this.id) || []
+    if (!edges.length) return
+    for (const edge of edges) {
+      if (edge.sourceNodeId === this.id && edge.updateStartPoint) {
+        const a =
+          this.getAnchorInfo(edge.sourceAnchorId) ||
+          this.anchors.find((x: { type?: string }) => x.type === 'right') ||
+          this.anchors[this.anchors.length - 1]
+        if (a) edge.updateStartPoint({ x: a.x, y: a.y })
+      }
+      if (edge.targetNodeId === this.id && edge.updateEndPoint) {
+        const a =
+          this.getAnchorInfo(edge.targetAnchorId) ||
+          this.anchors.find((x: { type?: string }) => x.type === 'left') ||
+          this.anchors[0]
+        if (a) edge.updateEndPoint({ x: a.x, y: a.y })
+      }
+    }
   }
 
   getNodeStyle() {
