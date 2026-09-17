@@ -75,6 +75,8 @@ watch(
 const extensions = computed((): Extension[] => {
   const list: Extension[] = [
     EditorView.lineWrapping,
+    // 关闭 CodeMirror 内容区浏览器拼写检查（红波浪线）
+    EditorView.contentAttributes.of({ spellcheck: 'false' }),
     EditorView.theme({
       '&': { height: '100%', fontSize: '12px' },
       '.cm-scroller': {
