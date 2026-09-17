@@ -1,6 +1,7 @@
 /**
- * HTTP 客户端节点运行：用 configuration.debugValue 作为实际请求体并执行本节点及后续。
- * 不渲染 body 模板；debugValue 仅调试使用，真实部署路径不会读取。
+ * HTTP 客户端节点运行：用 configuration.debugValue 作为实际请求体。
+ * mode=run 继续下游；mode=runOnly 只跑本节点。
+ * debugValue 仅调试使用，真实部署路径不会读取。
  */
 import { ElMessage } from 'element-plus'
 import { t } from '@/i18n'
@@ -37,16 +38,18 @@ async function runHttpClientNode(ctx: NodeRunContext) {
   const nodeName =
     (model.properties?.name as string) || model.text?.value || t('runners.httpClient.defaultName')
   const debug = !!model.properties?.debug
+  const runOnly = ctx.mode === 'runOnly'
 
   clearRunErrors(ctx.lf)
   prepareConsoleForRun()
-  // 未开调试：控制台不出现本节点任何日志（下游开调试的节点仍由引擎返回）
   if (debug) {
     appendConsoleLog({
       flowType: 'INFO',
       nodeId: ctx.nodeId,
       nodeName,
-      data: t('runners.httpClient.consoleStart'),
+      data: runOnly
+        ? t('runners.httpClient.consoleStartOnly')
+        : t('runners.httpClient.consoleStart'),
     })
   }
 
@@ -55,6 +58,7 @@ async function runHttpClientNode(ctx: NodeRunContext) {
       dsl: ctx.dsl,
       nodeId: ctx.nodeId,
       body,
+      runOnly,
     })
     if (res.logs?.length) {
       appendServerDebugLogs(res.logs)
@@ -78,7 +82,9 @@ async function runHttpClientNode(ctx: NodeRunContext) {
       return
     }
     clearRunErrors(ctx.lf)
-    ElMessage.success(t('runners.httpClient.success'))
+    ElMessage.success(
+      runOnly ? t('runners.httpClient.successOnly') : t('runners.httpClient.success'),
+    )
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     if (debug) {

@@ -121,7 +121,8 @@ export async function simulateInject(
 }
 
 /**
- * HTTP 客户端调试：用 debugValue 作为实际请求体（不走 body 模板），从该节点执行后续链路。
+ * HTTP 客户端调试：用 debugValue 作为实际请求体（不走 body 模板），从该节点执行。
+ * runOnly=true 时只跑本节点；false 时继续下游。
  */
 export async function simulateHttpClient(
   id: string,
@@ -129,6 +130,7 @@ export async function simulateHttpClient(
     dsl?: FlowDSL
     nodeId: string
     body?: string
+    runOnly?: boolean
   },
 ) {
   const { data } = await http.post<SimulateHttpRouteResult>(
@@ -139,7 +141,8 @@ export async function simulateHttpClient(
 }
 
 /**
- * JS 转换调试：用 debugValue 作为脚本 msg 入参，从该节点执行后续链路。
+ * JS 转换调试：用 debugValue 作为脚本 msg 入参，从该节点执行。
+ * runOnly=true 时只跑本节点；false 时继续下游。
  */
 export async function simulateJsTransform(
   id: string,
@@ -147,6 +150,7 @@ export async function simulateJsTransform(
     dsl?: FlowDSL
     nodeId: string
     body?: string
+    runOnly?: boolean
   },
 ) {
   const { data } = await http.post<SimulateHttpRouteResult>(

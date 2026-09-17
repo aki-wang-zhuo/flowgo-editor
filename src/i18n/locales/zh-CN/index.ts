@@ -86,7 +86,7 @@ export const zhCN = {
     edgeAria: '连线操作',
     edit: '修改',
     delete: '删除',
-    run: '运行',
+    run: '运行（含下游）',
     runOnly: '仅运行此节点',
     pickPath: '重新选择请求路径',
     edgeDelete: '删除连线',

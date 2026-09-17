@@ -86,7 +86,7 @@ export const enUS = {
     edgeAria: 'Edge actions',
     edit: 'Edit',
     delete: 'Delete',
-    run: 'Run',
+    run: 'Run (with downstream)',
     runOnly: 'Run this node only',
     pickPath: 'Reselect route',
     edgeDelete: 'Delete edge',

@@ -10,8 +10,10 @@ export const runners = {
   httpClient: {
     unsupported: 'HTTP client node only',
     defaultName: 'HTTP client',
-    consoleStart: 'HTTP client debug: run with test value as upstream message',
-    success: 'HTTP client finished',
+    consoleStart: 'HTTP client debug: run with test value and continue downstream',
+    consoleStartOnly: 'HTTP client debug: run this node only with test value',
+    success: 'HTTP client finished (with downstream)',
+    successOnly: 'HTTP client node finished',
   },
   httpEndpoint: {
     unsupported: 'Only edges from HTTP request nodes can run',
@@ -23,7 +25,9 @@ export const runners = {
   jsTransform: {
     unsupported: 'JS transform node only',
     defaultName: 'JS Transform',
-    consoleStart: 'JS transform debug: run script with test value as msg',
-    success: 'JS transform finished',
+    consoleStart: 'JS transform debug: run with test value and continue downstream',
+    consoleStartOnly: 'JS transform debug: run this node only with test value',
+    success: 'JS transform finished (with downstream)',
+    successOnly: 'JS transform node finished',
   },
 }

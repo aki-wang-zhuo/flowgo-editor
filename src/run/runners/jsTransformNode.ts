@@ -1,5 +1,6 @@
 /**
- * JS 转换节点运行：用 configuration.debugValue 作为脚本 msg 入参并执行本节点及后续。
+ * JS 转换节点运行：用 configuration.debugValue 作为脚本 msg 入参。
+ * mode=run 继续下游；mode=runOnly 只跑本节点。
  * debugValue 仅调试使用，真实部署 / 上游触发不会读取。
  */
 import { ElMessage } from 'element-plus'
@@ -37,6 +38,7 @@ async function runJsTransformNode(ctx: NodeRunContext) {
   const nodeName =
     (model.properties?.name as string) || model.text?.value || t('runners.jsTransform.defaultName')
   const debug = !!model.properties?.debug
+  const runOnly = ctx.mode === 'runOnly'
 
   clearRunErrors(ctx.lf)
   prepareConsoleForRun()
@@ -45,7 +47,9 @@ async function runJsTransformNode(ctx: NodeRunContext) {
       flowType: 'INFO',
       nodeId: ctx.nodeId,
       nodeName,
-      data: t('runners.jsTransform.consoleStart'),
+      data: runOnly
+        ? t('runners.jsTransform.consoleStartOnly')
+        : t('runners.jsTransform.consoleStart'),
     })
   }
 
@@ -54,6 +58,7 @@ async function runJsTransformNode(ctx: NodeRunContext) {
       dsl: ctx.dsl,
       nodeId: ctx.nodeId,
       body,
+      runOnly,
     })
     if (res.logs?.length) {
       appendServerDebugLogs(res.logs)
@@ -77,7 +82,9 @@ async function runJsTransformNode(ctx: NodeRunContext) {
       return
     }
     clearRunErrors(ctx.lf)
-    ElMessage.success(t('runners.jsTransform.success'))
+    ElMessage.success(
+      runOnly ? t('runners.jsTransform.successOnly') : t('runners.jsTransform.success'),
+    )
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     if (debug) {
