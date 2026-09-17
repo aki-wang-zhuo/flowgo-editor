@@ -33,4 +33,9 @@ export const canvas = {
     title: '插入节点',
     confirm: '插入',
   },
+  minimap: {
+    title: '导航',
+    open: '打开小地图',
+    close: '关闭小地图',
+  },
 }

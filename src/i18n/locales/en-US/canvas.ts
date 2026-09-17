@@ -33,4 +33,9 @@ export const canvas = {
     title: 'Insert node',
     confirm: 'Insert',
   },
+  minimap: {
+    title: 'Navigator',
+    open: 'Show minimap',
+    close: 'Hide minimap',
+  },
 }

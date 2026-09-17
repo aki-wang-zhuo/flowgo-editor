@@ -8,6 +8,7 @@ export const flows = {
   newFlow: 'New flow',
   newGroup: 'New group',
   emptyMatch: 'No matching flows',
+  empty: 'No flows yet',
   unpublished: 'Unpublished',
   unpublishedChanges: 'Unpublished changes',
   emptyInGroup: 'No flows in this group',

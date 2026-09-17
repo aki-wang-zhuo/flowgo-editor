@@ -3,7 +3,7 @@
  */
 import { onBeforeUnmount, ref, shallowRef, type Ref } from 'vue'
 import LogicFlow from '@logicflow/core'
-import { SelectionSelect } from '@logicflow/extension'
+import { MiniMap, SelectionSelect } from '@logicflow/extension'
 import '@logicflow/core/lib/style/index.css'
 import '@logicflow/extension/lib/style/index.css'
 import { registerFlowNodes } from './registerNodes'
@@ -86,7 +86,19 @@ export function useLogicFlow(
       stopScrollGraph: true,
       // 允许多选（框选结果可同时高亮多个节点）
       multipleSelectKey: 'ctrl',
-      plugins: [SelectionSelect],
+      plugins: [SelectionSelect, MiniMap],
+      pluginsOptions: {
+        // 右下角缩略图；关闭按钮由 CanvasMiniMap 接管展开态
+        miniMap: {
+          width: 180,
+          height: 120,
+          showEdge: true,
+          isShowHeader: true,
+          isShowCloseIcon: true,
+          rightPosition: 12,
+          bottomPosition: 12,
+        },
+      },
     })
     registerFlowNodes(instance, cachedComponentTypes())
     // 默认关框选，空白拖拽用于平移画布

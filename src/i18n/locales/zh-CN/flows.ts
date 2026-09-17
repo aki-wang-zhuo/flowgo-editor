@@ -8,6 +8,7 @@ export const flows = {
   newFlow: '新建流程',
   newGroup: '新建分组',
   emptyMatch: '没有匹配的流程',
+  empty: '暂无流程',
   unpublished: '未发布',
   unpublishedChanges: '有未发布改动',
   emptyInGroup: '暂无流程',

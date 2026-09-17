@@ -20,6 +20,7 @@ import {
   EdgeSelectionTools,
 } from '@/components/selection-tools'
 import CanvasQuickToolbar from '@/components/canvas/CanvasQuickToolbar.vue'
+import CanvasMiniMap from '@/components/canvas/CanvasMiniMap.vue'
 import RunErrorBubble from '@/components/canvas/RunErrorBubble.vue'
 import { ensureRunnersRegistered, runEdge, runNode } from '@/run/dispatch'
 
@@ -49,6 +50,7 @@ const emit = defineEmits<{
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
+const minimapRef = ref<InstanceType<typeof CanvasMiniMap> | null>(null)
 const { lf, init } = useLogicFlow(containerRef)
 /** 按住 Alt + 左键拖拽框选 */
 useAltSelectionSelect(lf)
@@ -208,6 +210,8 @@ function renderDsl(dsl: FlowDSL) {
   lf.value.render(graph as unknown as Record<string, unknown>)
   // 打开/切换流程后默认缩放到全部节点可见
   fitAllAfterRender()
+  // render 不一定走 history，主动刷新已展开的小地图
+  requestAnimationFrame(() => minimapRef.value?.refresh?.())
 }
 
 /** 等容器尺寸就绪后再 fitView，避免首帧宽高为 0 */
@@ -252,6 +256,7 @@ defineExpose({ getGraphData, lf })
       @history="emit('history')"
       @graph-change="emit('graphChange')"
     />
+    <CanvasMiniMap ref="minimapRef" :lf="lf" />
     <RunErrorBubble :lf="lf" />
     <NodeSelectionTools
       v-if="lf"
@@ -292,5 +297,42 @@ defineExpose({ getGraphData, lf })
 }
 .canvas-wrap:has(.lf-selection-select) {
   cursor: crosshair;
+}
+
+/* 右下角小地图：标题栏 + 关闭；预览框可拖拽导航 */
+.canvas-wrap :deep(.lf-mini-map) {
+  z-index: 12;
+  padding: 6px;
+  padding-top: 28px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+.canvas-wrap :deep(.lf-mini-map-header) {
+  margin: 4px 28px 4px 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: #64748b;
+  user-select: none;
+}
+.canvas-wrap :deep(.lf-mini-map-close) {
+  top: 6px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  opacity: 0.55;
+}
+.canvas-wrap :deep(.lf-mini-map-close:hover) {
+  opacity: 1;
+}
+.canvas-wrap :deep(.lf-minimap-viewport) {
+  background-color: rgba(37, 99, 235, 0.16);
+  border: 1px solid rgba(37, 99, 235, 0.55);
+  border-radius: 2px;
+  cursor: grab;
+}
+.canvas-wrap :deep(.lf-minimap-viewport:active) {
+  cursor: grabbing;
 }
 </style>
