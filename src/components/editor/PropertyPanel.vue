@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 右侧属性面板：Tab「属性 / 文档」。
- * 文档为节点类型级 Markdown，本地缓存；切入文档 Tab 时按需拉取。
+ * 文档为节点类型级 Markdown，始终从服务端内存库经 API 读取。
  */
 import { computed, reactive, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

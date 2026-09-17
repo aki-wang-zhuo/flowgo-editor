@@ -31,8 +31,16 @@ export async function getComponentDoc(type: string) {
   return data
 }
 
-/** 全部已启用节点的编辑器文档（用于刷新本地缓存） */
+/** 全部已启用节点的编辑器文档 */
 export async function listComponentDocs() {
   const { data } = await http.get<ComponentDocsResponse>('/components/docs')
+  return data
+}
+
+/** 通知服务端重新扫描 data/docs 载入内存 */
+export async function reloadComponentDocs() {
+  const { data } = await http.post<{ status: string; message?: string }>(
+    '/components/docs/reload',
+  )
   return data
 }

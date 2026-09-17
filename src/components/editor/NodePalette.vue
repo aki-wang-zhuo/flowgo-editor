@@ -51,7 +51,7 @@ async function reload() {
   }
 }
 
-/** 从服务端重拉全部节点文档并覆盖本地缓存 */
+/** 通知服务端重载磁盘文档到内存，并刷新面板计数 */
 async function refreshDocs() {
   docsRefreshing.value = true
   try {
