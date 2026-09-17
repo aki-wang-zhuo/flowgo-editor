@@ -1,5 +1,5 @@
 /**
- * 设置相关 API：MCP 权限、节点管理。
+ * 设置相关 API：MCP 权限、节点管理、用户级模板。
  */
 import http from './http'
 
@@ -131,4 +131,53 @@ export async function listMarketplaceComponents() {
     message: string
   }>('/components/marketplace')
   return data
+}
+
+/** 用户级 HTTP 响应体自定义模板（Clover settings 文档） */
+export interface HttpResponseCustomTemplate {
+  id: string
+  name: string
+  statusCode: number
+  body: string
+}
+
+/** GET /api/settings/http-response-templates */
+export async function listHttpResponseTemplates() {
+  const { data } = await http.get<{ items: HttpResponseCustomTemplate[] }>(
+    '/settings/http-response-templates',
+  )
+  return data.items || []
+}
+
+/** POST /api/settings/http-response-templates */
+export async function addHttpResponseTemplate(payload: {
+  name: string
+  statusCode: number
+  body: string
+}) {
+  const { data } = await http.post<HttpResponseCustomTemplate>(
+    '/settings/http-response-templates',
+    payload,
+  )
+  return data
+}
+
+/** PUT /api/settings/http-response-templates/{id} — 覆盖自定义模板内容 */
+export async function updateHttpResponseTemplate(
+  id: string,
+  payload: { statusCode: number; body: string },
+) {
+  const { data } = await http.put<HttpResponseCustomTemplate>(
+    `/settings/http-response-templates/${encodeURIComponent(id)}`,
+    payload,
+  )
+  return data
+}
+
+/** DELETE /api/settings/http-response-templates/{id} */
+export async function deleteHttpResponseTemplate(id: string) {
+  const { data } = await http.delete<{ items: HttpResponseCustomTemplate[] }>(
+    `/settings/http-response-templates/${encodeURIComponent(id)}`,
+  )
+  return data.items || []
 }

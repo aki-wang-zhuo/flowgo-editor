@@ -14,11 +14,14 @@ import {
 import { resolveWidget } from './resolveWidget'
 import { matchShowIf } from './showIf'
 import type { HttpRouterItem } from '@/canvas/httpRouter'
+import HttpResponseTemplateBar from '../HttpResponseTemplateBar.vue'
 
 const props = defineProps<{
   fields: ConfigField[]
   /** 当前节点 configuration */
   modelValue: Record<string, unknown>
+  /** 节点 type，用于 HTTP 响应体模板等特化 */
+  nodeType?: string
 }>()
 
 const emit = defineEmits<{
@@ -121,6 +124,17 @@ function onRouterListUpdate(f: ConfigField, v: HttpRouterItem[]) {
   emitUp()
 }
 
+/** HTTP 响应 body 字段展示预设模板下拉 */
+function isHttpResponseBody(f: ConfigField) {
+  return props.nodeType === 'httpResponse' && f.name === 'body'
+}
+
+function onHttpResponseTemplateApply(v: { statusCode: number; body: string }) {
+  local.statusCode = v.statusCode
+  local.body = v.body
+  emitUp()
+}
+
 /** 父级切换节点时关闭全屏 */
 function closeMaximize() {
   const list = codeRefs.value
@@ -197,7 +211,15 @@ defineExpose({ closeMaximize })
         :height="codeHeight(f)"
         :hint="(f.hint || '').trim() || undefined"
         @update:model-value="(v) => onCodeUpdate(f, v)"
-      />
+      >
+        <template v-if="isHttpResponseBody(f)" #below-head>
+          <HttpResponseTemplateBar
+            :status-code="Number(local.statusCode) || 200"
+            :body="String(local.body ?? '')"
+            @apply="onHttpResponseTemplateApply"
+          />
+        </template>
+      </DynamicCodeField>
 
       <el-form-item v-else :label="fieldLabel(f)" :required="f.required">
         <el-input

@@ -86,6 +86,10 @@ defineExpose({ closeMaximize })
         </el-tooltip>
       </div>
     </div>
+    <!-- 标题行下方扩展区（如 HTTP 响应模板选择） -->
+    <div v-if="$slots['below-head']" class="dyn-code__below">
+      <slot name="below-head" />
+    </div>
     <div v-if="hint" class="dyn-code__hint">{{ hint }}</div>
     <CodeBlockField
       ref="editorRef"
@@ -191,6 +195,9 @@ defineExpose({ closeMaximize })
 .dyn-code__icon-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.dyn-code__below {
+  margin: 0 0 8px;
 }
 .dyn-code__hint {
   margin: 0 0 8px;

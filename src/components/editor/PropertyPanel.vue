@@ -141,6 +141,7 @@ function onConfigChange(v: Record<string, unknown>) {
           :key="nodeId || ''"
           ref="dynFormRef"
           :fields="configFields"
+          :node-type="form.type"
           :model-value="form.configuration"
           @update:model-value="onConfigChange"
         />
