@@ -56,7 +56,7 @@ export const forms = {
     urlTemplateHint: 'Templates: ${msg}, ${msg.a.b}, ${metadata.xxx}',
     bodyEmptyHint: 'Empty: use upstream message as request body.',
     bodyPlaceholderHint: 'Same placeholders as above.',
-    debugRunHint: 'Used as upstream message only when Run is clicked; not used in production or HTTP entry.',
+    debugRunHint: 'When Run is clicked on this node, this is the actual request body (body template is skipped). Not used in production or HTTP entry.',
   },
   httpResponse: {
     statusCode: 'Status code',

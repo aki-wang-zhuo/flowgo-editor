@@ -60,17 +60,18 @@ async function runHttpEndpointEdge(ctx: EdgeRunContext) {
     (source.properties?.name as string) || source.text?.value || t('runners.httpEndpoint.defaultName')
   const httpDebug = !!source.properties?.debug
 
-  appendConsoleLog({
-    flowType: 'INFO',
-    nodeId: ctx.sourceNodeId,
-    nodeName,
-    relationType: label,
-    data: t('runners.httpEndpoint.consoleStart', {
-      method: (router.method || 'POST').toUpperCase(),
-      path: router.path || '/',
-    }),
-  })
+  // 未开调试：控制台不出现入口节点任何日志；下游开调试的节点仍由引擎返回
   if (httpDebug) {
+    appendConsoleLog({
+      flowType: 'INFO',
+      nodeId: ctx.sourceNodeId,
+      nodeName,
+      relationType: label,
+      data: t('runners.httpEndpoint.consoleStart', {
+        method: (router.method || 'POST').toUpperCase(),
+        path: router.path || '/',
+      }),
+    })
     appendConsoleLog({
       flowType: 'IN',
       nodeId: ctx.sourceNodeId,
@@ -100,13 +101,15 @@ async function runHttpEndpointEdge(ctx: EdgeRunContext) {
       })
     }
     if (res.error) {
-      appendConsoleLog({
-        flowType: 'ERROR',
-        nodeId: ctx.sourceNodeId,
-        nodeName: label,
-        data: res.data || '',
-        err: res.error,
-      })
+      if (httpDebug) {
+        appendConsoleLog({
+          flowType: 'ERROR',
+          nodeId: ctx.sourceNodeId,
+          nodeName: label,
+          data: res.data || '',
+          err: res.error,
+        })
+      }
       applyRunResultErrors(ctx.lf, {
         error: res.error,
         logs: res.logs,
@@ -116,23 +119,17 @@ async function runHttpEndpointEdge(ctx: EdgeRunContext) {
       return
     }
     clearRunErrors(ctx.lf)
-    if (!httpDebug) {
-      appendConsoleLog({
-        flowType: 'OUT',
-        nodeId: ctx.sourceNodeId,
-        nodeName: label,
-        data: res.data ?? '',
-      })
-    }
     ElMessage.success(t('runners.httpEndpoint.success'))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    appendConsoleLog({
-      flowType: 'ERROR',
-      nodeId: ctx.sourceNodeId,
-      nodeName: label,
-      err: msg,
-    })
+    if (httpDebug) {
+      appendConsoleLog({
+        flowType: 'ERROR',
+        nodeId: ctx.sourceNodeId,
+        nodeName: label,
+        err: msg,
+      })
+    }
     applyRunResultErrors(ctx.lf, {
       error: msg,
       fallbackNodeId: ctx.targetNodeId || ctx.sourceNodeId,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * HTTP 客户端节点属性：方法、URL、请求头、请求体、超时、调试测试值。
- * debugValue 仅编辑器运行使用，真实部署不读；代码区标题行带格式化按钮。
+ * debugValue 仅节点「运行」时作为实际请求体（不走 body 模板）；真实部署不读。
  */
 import { reactive, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -20,7 +20,7 @@ export interface HttpClientFormModel {
   headers: HttpClientHeaderRow[]
   body: string
   timeoutSec: number
-  /** 仅调试运行用的上游 JSON */
+  /** 仅节点「运行」时作为实际请求体的 JSON */
   debugValue: string
 }
 

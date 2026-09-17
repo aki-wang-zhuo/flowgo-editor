@@ -56,7 +56,7 @@ export const forms = {
     urlTemplateHint: '支持模板：${msg}、${msg.a.b}、${metadata.xxx}',
     bodyEmptyHint: '留空：使用上游消息内容作为请求体。',
     bodyPlaceholderHint: '占位符同上。',
-    debugRunHint: '仅节点浮动栏「运行」时作为上游消息；真实部署 / HTTP 入口触发不会使用。',
+    debugRunHint: '仅节点浮动栏「运行」时作为实际请求体，不使用上方请求体模板；真实部署 / HTTP 入口触发不会使用。',
   },
   httpResponse: {
     statusCode: '状态码 (statusCode)',

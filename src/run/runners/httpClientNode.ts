@@ -1,6 +1,6 @@
 /**
- * HTTP 客户端节点运行：用 configuration.debugValue 作为上游消息并执行本节点及后续。
- * debugValue 仅调试使用，真实部署路径不会读取。
+ * HTTP 客户端节点运行：用 configuration.debugValue 作为实际请求体并执行本节点及后续。
+ * 不渲染 body 模板；debugValue 仅调试使用，真实部署路径不会读取。
  */
 import { ElMessage } from 'element-plus'
 import { t } from '@/i18n'
@@ -40,12 +40,15 @@ async function runHttpClientNode(ctx: NodeRunContext) {
 
   clearRunErrors(ctx.lf)
   prepareConsoleForRun()
-  appendConsoleLog({
-    flowType: 'INFO',
-    nodeId: ctx.nodeId,
-    nodeName,
-    data: t('runners.httpClient.consoleStart'),
-  })
+  // 未开调试：控制台不出现本节点任何日志（下游开调试的节点仍由引擎返回）
+  if (debug) {
+    appendConsoleLog({
+      flowType: 'INFO',
+      nodeId: ctx.nodeId,
+      nodeName,
+      data: t('runners.httpClient.consoleStart'),
+    })
+  }
 
   try {
     const res = await simulateHttpClient(ctx.flowId, {
@@ -57,13 +60,15 @@ async function runHttpClientNode(ctx: NodeRunContext) {
       appendServerDebugLogs(res.logs)
     }
     if (res.error) {
-      appendConsoleLog({
-        flowType: 'ERROR',
-        nodeId: ctx.nodeId,
-        nodeName,
-        data: res.data || '',
-        err: res.error,
-      })
+      if (debug) {
+        appendConsoleLog({
+          flowType: 'ERROR',
+          nodeId: ctx.nodeId,
+          nodeName,
+          data: res.data || '',
+          err: res.error,
+        })
+      }
       applyRunResultErrors(ctx.lf, {
         error: res.error,
         logs: res.logs,
@@ -73,24 +78,17 @@ async function runHttpClientNode(ctx: NodeRunContext) {
       return
     }
     clearRunErrors(ctx.lf)
-    if (!debug) {
-      appendConsoleLog({
-        flowType: 'OUT',
-        nodeId: ctx.nodeId,
-        nodeName,
-        relationType: 'Success',
-        data: res.data ?? '',
-      })
-    }
     ElMessage.success(t('runners.httpClient.success'))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    appendConsoleLog({
-      flowType: 'ERROR',
-      nodeId: ctx.nodeId,
-      nodeName,
-      err: msg,
-    })
+    if (debug) {
+      appendConsoleLog({
+        flowType: 'ERROR',
+        nodeId: ctx.nodeId,
+        nodeName,
+        err: msg,
+      })
+    }
     applyRunResultErrors(ctx.lf, {
       error: msg,
       fallbackNodeId: ctx.nodeId,

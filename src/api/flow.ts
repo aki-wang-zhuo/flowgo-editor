@@ -121,7 +121,7 @@ export async function simulateInject(
 }
 
 /**
- * HTTP 客户端调试：用 debugValue 作为上游消息，从该节点执行后续链路。
+ * HTTP 客户端调试：用 debugValue 作为实际请求体（不走 body 模板），从该节点执行后续链路。
  */
 export async function simulateHttpClient(
   id: string,
