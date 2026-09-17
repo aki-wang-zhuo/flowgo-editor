@@ -41,7 +41,10 @@ export interface ConfigField {
   description?: string
   /** 开关旁补充说明 */
   hint?: string
-  /** text | textarea | code-json | code-js | switch | number；空则按 type 推断 */
+  /**
+   * text | textarea | code-json | code-js | switch | number | router-list；
+   * 空则按 type 推断。routers 数组即使标 code-json 也会被前端识别为 router-list。
+   */
   widget?: string
   rows?: number
   /** 条件显示，如 https=true */

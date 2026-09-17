@@ -2,6 +2,11 @@
  * ConfigField.Default 解析与拖拽默认 configuration 生成。
  */
 import type { ConfigField } from '@/types/flow'
+import {
+  normalizeRouterList,
+  parseRouterList,
+  type HttpRouterItem,
+} from '@/canvas/httpRouter'
 import { resolveWidget } from './resolveWidget'
 
 /** 将后端 Default 字符串按字段类型转为运行时值 */
@@ -11,9 +16,14 @@ export function parseFieldDefault(field: ConfigField): unknown {
     const w = resolveWidget(field)
     if (w === 'switch') return false
     if (w === 'number') return 0
+    if (w === 'router-list') return parseRouterList([])
     if (field.type === 'object') return {}
     if (field.type === 'array') return []
     return ''
+  }
+  const w = resolveWidget(field)
+  if (w === 'router-list') {
+    return parseRouterList(raw)
   }
   const t = (field.type || '').toLowerCase()
   if (t === 'boolean') {
@@ -59,6 +69,9 @@ export function readFieldDisplayValue(
   const has = Object.prototype.hasOwnProperty.call(conf, field.name)
   const raw = has ? conf[field.name] : parseFieldDefault(field)
   const w = resolveWidget(field)
+  if (w === 'router-list') {
+    return parseRouterList(raw)
+  }
   if (w === 'code-json' || w === 'code-js') {
     if (typeof raw === 'string') return raw
     try {
@@ -84,6 +97,13 @@ export function readFieldDisplayValue(
 export function writeFieldValue(field: ConfigField, uiValue: unknown): unknown {
   const w = resolveWidget(field)
   const t = (field.type || '').toLowerCase()
+  if (w === 'router-list') {
+    return normalizeRouterList(
+      Array.isArray(uiValue)
+        ? (uiValue as HttpRouterItem[])
+        : parseRouterList(uiValue),
+    )
+  }
   if (w === 'switch') return !!uiValue
   if (w === 'number') {
     const n = Number(uiValue)

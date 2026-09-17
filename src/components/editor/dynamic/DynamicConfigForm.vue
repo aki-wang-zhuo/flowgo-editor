@@ -3,14 +3,17 @@
  * 按后端 ConfigFields 动态渲染节点 configuration 表单。
  */
 import { computed, reactive, useTemplateRef, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { ConfigField } from '@/types/flow'
 import DynamicCodeField from './DynamicCodeField.vue'
+import RouterListField from './RouterListField.vue'
 import {
   readFieldDisplayValue,
   writeFieldValue,
 } from './configDefaults'
 import { resolveWidget } from './resolveWidget'
 import { matchShowIf } from './showIf'
+import type { HttpRouterItem } from '@/canvas/httpRouter'
 
 const props = defineProps<{
   fields: ConfigField[]
@@ -22,7 +25,9 @@ const emit = defineEmits<{
   'update:modelValue': [v: Record<string, unknown>]
 }>()
 
-/** 表单展示态（代码类为字符串） */
+const { t } = useI18n()
+
+/** 表单展示态（代码类为字符串；router-list 为对象数组） */
 const local = reactive<Record<string, unknown>>({})
 
 const codeRefs = useTemplateRef<InstanceType<typeof DynamicCodeField>[]>('codeRefs')
@@ -53,6 +58,10 @@ const visibleFields = computed(() =>
 )
 
 function fieldLabel(f: ConfigField) {
+  // 路由列表不用后端 schema 说明当标签，改用本地化短标题
+  if (resolveWidget(f) === 'router-list') {
+    return t('forms.httpEndpoint.routers')
+  }
   return (f.description || '').trim() || f.name
 }
 
@@ -102,6 +111,12 @@ function onNumberChange(f: ConfigField, v: number | undefined) {
 }
 
 function onCodeUpdate(f: ConfigField, v: string) {
+  local[f.name] = v
+  emitUp()
+}
+
+/** 路由列表结构化编辑写回（始终为对象数组，不再走 JSON 文本） */
+function onRouterListUpdate(f: ConfigField, v: HttpRouterItem[]) {
   local[f.name] = v
   emitUp()
 }
@@ -159,6 +174,17 @@ defineExpose({ closeMaximize })
           :rows="f.rows && f.rows > 0 ? f.rows : 4"
           @update:model-value="(v: string) => (local[f.name] = v)"
           @change="onTextChange"
+        />
+      </el-form-item>
+
+      <el-form-item
+        v-else-if="resolveWidget(f) === 'router-list'"
+        :label="fieldLabel(f)"
+        :required="f.required"
+      >
+        <RouterListField
+          :model-value="local[f.name]"
+          @update:model-value="(v) => onRouterListUpdate(f, v)"
         />
       </el-form-item>
 
