@@ -1,19 +1,29 @@
 <script setup lang="ts">
 /**
  * 动态表单中的代码编辑字段：格式化 / 最大化。
+ * 透传 globalNames 供 CodeBlockField 注入补全；enableFormat=false 用于 Go expr。
  */
 import { ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MagicStick, FullScreen, Close } from '@element-plus/icons-vue'
 import CodeBlockField from '@/components/common/CodeBlockField.vue'
 
-const props = defineProps<{
-  label: string
-  modelValue: string
-  language: 'json' | 'javascript' | 'text'
-  height?: string
-  hint?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    label: string
+    modelValue: string
+    language: 'json' | 'javascript' | 'text'
+    height?: string
+    hint?: string
+    /** 是否显示并允许格式化；Go expr 等应设为 false */
+    enableFormat?: boolean
+    /** 本流程 globalVars 变量名（不含 global. 前缀） */
+    globalNames?: string[]
+  }>(),
+  {
+    enableFormat: true,
+  },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [v: string]
@@ -32,6 +42,7 @@ function onUpdate(v: string) {
 }
 
 async function onFormat() {
+  if (!props.enableFormat) return
   const editor = maximized.value ? maxEditorRef.value : editorRef.value
   if (!editor?.format) return
   formatting.value = true
@@ -59,7 +70,7 @@ defineExpose({ closeMaximize })
       <span class="dyn-code__label">{{ label }}</span>
       <div class="dyn-code__actions">
         <el-tooltip
-          v-if="language === 'json' || language === 'javascript'"
+          v-if="enableFormat && (language === 'json' || language === 'javascript')"
           :content="t('common.format')"
           placement="top"
           :show-after="300"
@@ -96,6 +107,8 @@ defineExpose({ closeMaximize })
       :model-value="modelValue"
       :language="language"
       :show-toolbar="false"
+      :enable-format="enableFormat"
+      :global-names="globalNames"
       :height="height || '180px'"
       @update:model-value="onUpdate"
     />
@@ -111,7 +124,7 @@ defineExpose({ closeMaximize })
           <span class="dyn-code-max__title">{{ label }}</span>
           <div class="dyn-code-max__actions">
             <el-tooltip
-              v-if="language === 'json' || language === 'javascript'"
+              v-if="enableFormat && (language === 'json' || language === 'javascript')"
               :content="t('common.format')"
               placement="bottom"
               :show-after="300"
@@ -144,6 +157,8 @@ defineExpose({ closeMaximize })
             :model-value="modelValue"
             :language="language"
             :show-toolbar="false"
+            :enable-format="enableFormat"
+            :global-names="globalNames"
             maximized
             height="100%"
             @update:model-value="onUpdate"

@@ -5,6 +5,7 @@
 import { computed, reactive, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConfigField } from '@/types/flow'
+import type { LfInstance } from '@/canvas/lf-types'
 import DynamicCodeField from './DynamicCodeField.vue'
 import RouterListField from './RouterListField.vue'
 import GlobalVarListField from './GlobalVarListField.vue'
@@ -17,6 +18,7 @@ import { resolveWidget } from './resolveWidget'
 import { matchShowIf } from './showIf'
 import type { HttpRouterItem } from '@/canvas/httpRouter'
 import HttpResponseTemplateBar from '../HttpResponseTemplateBar.vue'
+import { collectFlowGlobalNames } from '@/components/common/collectFlowGlobalNames'
 
 const props = defineProps<{
   fields: ConfigField[]
@@ -24,6 +26,8 @@ const props = defineProps<{
   modelValue: Record<string, unknown>
   /** 节点 type，用于 HTTP 响应体模板等特化 */
   nodeType?: string
+  /** 画布实例：用于收集本流程 globalVars 补全 */
+  lf?: LfInstance | null
 }>()
 
 const emit = defineEmits<{
@@ -72,6 +76,28 @@ function fieldLabel(f: ConfigField) {
   }
   return (f.description || '').trim() || f.name
 }
+
+/** IF / Switch 表达式：优先本地化说明（标明 Go expr） */
+function fieldHint(f: ConfigField): string | undefined {
+  if (f.name === 'expression' && props.nodeType === 'if') {
+    return t('forms.if.hint')
+  }
+  if (f.name === 'expression' && props.nodeType === 'switch') {
+    return t('forms.switch.expressionHint')
+  }
+  return (f.hint || '').trim() || undefined
+}
+
+/** Go expr 字段禁用 JS 格式化，避免破坏表达式 */
+function isGoExprField(f: ConfigField): boolean {
+  return (
+    f.name === 'expression' &&
+    (props.nodeType === 'if' || props.nodeType === 'switch')
+  )
+}
+
+/** 本流程已声明的 global 变量名（供代码补全） */
+const flowGlobalNames = computed(() => collectFlowGlobalNames(props.lf))
 
 function codeLanguage(f: ConfigField): 'json' | 'javascript' | 'text' {
   const w = resolveWidget(f)
@@ -259,7 +285,9 @@ defineExpose({ closeMaximize })
         :model-value="String(local[f.name] ?? '')"
         :language="codeLanguage(f)"
         :height="codeHeight(f)"
-        :hint="(f.hint || '').trim() || undefined"
+        :hint="fieldHint(f)"
+        :enable-format="!isGoExprField(f)"
+        :global-names="flowGlobalNames"
         @update:model-value="(v) => onCodeUpdate(f, v)"
       >
         <template v-if="isHttpResponseBody(f)" #below-head>

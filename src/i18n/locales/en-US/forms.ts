@@ -11,14 +11,14 @@ export const forms = {
   },
   if: {
     expressionLabel: 'Condition (expression)',
-    hint: 'Go expr boolean. Vars: msg, metadata, msgType, dataType, global. True → True branch, else → False.',
+    hint: 'Boolean expression uses Go expr (not JavaScript). Vars: msg, metadata, msgType, dataType, global (incl. flow global.xxx); type to autocomplete. True → True branch, else → False. Formatting is disabled.',
     maximizeAria: 'Edit expression fullscreen',
     maximizeTitle: 'Condition',
   },
   switch: {
     expressionLabel: 'Value expression',
     expressionHint:
-      'Result is string-compared to case values; unmatched goes to Default. Vars: msg / metadata / msgType / dataType / global',
+      'Value expression uses Go expr (not JavaScript). Result is string-compared to case values; unmatched goes to Default. Vars: msg / metadata / msgType / dataType / global.xxx; autocomplete available. Formatting is disabled.',
     casesLabel: 'Cases',
     nameOptional: 'Name (optional)',
     addCase: 'Add case',

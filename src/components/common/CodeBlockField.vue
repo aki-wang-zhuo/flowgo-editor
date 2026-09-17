@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
  * 通用代码块编辑：CodeMirror 高亮；JSON / JavaScript 支持格式化按钮。
+ * 默认注入内置变量补全（msg / metadata / global / msg.__dataTime.* 等）。
  * 可通过 showToolbar=false 隐藏内置工具条，由父级调用 format()；支持 maximized 全屏。
  */
 import { Codemirror } from 'vue-codemirror'
@@ -16,6 +17,7 @@ import prettier from 'prettier/standalone'
 import * as prettierPluginBabel from 'prettier/plugins/babel'
 import * as prettierPluginEstree from 'prettier/plugins/estree'
 import { formatJsonLoose } from '@/utils/formatJson'
+import { buildCodeCompletionsExtension } from './codeCompletions'
 
 const props = withDefaults(
   defineProps<{
@@ -29,10 +31,19 @@ const props = withDefaults(
     dark?: boolean
     /**
      * 是否显示内置「格式化」按钮。
-     * 默认：json / javascript 显示；text 不显示。
+     * 默认：json / javascript 且 enableFormat 为真时显示；text 不显示。
      * 父级已外置格式化按钮时请设为 false。
      */
     showToolbar?: boolean
+    /**
+     * 是否允许格式化（含 format() 与工具条）。
+     * 默认：json / javascript 为 true；Go expr 等场景请显式 false。
+     */
+    enableFormat?: boolean
+    /** 是否启用内置 + 流程 global 自动补全；默认 true */
+    enableCompletions?: boolean
+    /** 本流程 globalVars 已声明的变量名（不含 global. 前缀） */
+    globalNames?: string[]
     /** 是否全屏最大化 */
     maximized?: boolean
   }>(),
@@ -42,6 +53,7 @@ const props = withDefaults(
     placeholder: '',
     dark: true,
     maximized: false,
+    enableCompletions: true,
   },
 )
 
@@ -56,9 +68,15 @@ const local = ref(props.modelValue || '')
 const formatError = ref('')
 const formatting = ref(false)
 
+/** 格式化是否可用（Go expr 等应关闭） */
+const formatEnabled = computed(() => {
+  if (props.enableFormat != null) return props.enableFormat
+  return props.language === 'json' || props.language === 'javascript'
+})
+
 const showToolbarResolved = computed(() => {
   if (props.showToolbar != null) return props.showToolbar
-  return props.language === 'json' || props.language === 'javascript'
+  return formatEnabled.value
 })
 
 const editorHeight = computed(() =>
@@ -87,6 +105,9 @@ const extensions = computed((): Extension[] => {
   if (props.language === 'json') list.push(json())
   if (props.language === 'javascript') list.push(javascript())
   if (props.dark) list.push(oneDark)
+  if (props.enableCompletions) {
+    list.push(buildCodeCompletionsExtension(props.globalNames || []))
+  }
   return list
 })
 
@@ -134,8 +155,9 @@ const editorText = computed({
   },
 })
 
-/** 格式化当前内容（可供父级按钮调用） */
+/** 格式化当前内容（可供父级按钮调用）；enableFormat=false 时直接返回 false */
 async function format(): Promise<boolean> {
+  if (!formatEnabled.value) return false
   if (props.language === 'json') {
     formatting.value = true
     formatError.value = ''

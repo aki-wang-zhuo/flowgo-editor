@@ -11,14 +11,14 @@ export const forms = {
   },
   if: {
     expressionLabel: '条件表达式 (expression)',
-    hint: 'Go expr 布尔表达式。变量：msg、metadata、msgType、dataType、global。成立 → True，否则 → False。',
+    hint: '布尔表达式使用 Go expr 语法（非 JavaScript）。变量：msg、metadata、msgType、dataType、global（含本流程 global.xxx）；可输入触发补全。成立 → True，否则 → False。不支持格式化。',
     maximizeAria: '条件表达式全屏编辑',
     maximizeTitle: '条件表达式',
   },
   switch: {
     expressionLabel: '取值表达式 (expression)',
     expressionHint:
-      '结果转字符串后与下方 value 比较；未命中走 Default。变量：msg / metadata / msgType / dataType / global',
+      '取值表达式使用 Go expr（非 JavaScript）。结果转字符串后与下方 value 比较；未命中走 Default。变量：msg / metadata / msgType / dataType / global.xxx；可补全。不支持格式化。',
     casesLabel: '分支 cases',
     nameOptional: '名称（可选）',
     addCase: '添加分支',
