@@ -36,6 +36,14 @@ export const canvas = {
   minimap: {
     title: 'Navigator',
     open: 'Show minimap',
-    close: 'Hide minimap',
+    close: 'Close',
+    menuAria: 'Minimap menu',
+    fitAll: 'Fit all',
+    exportImage: 'Export image',
+    exportOk: 'Canvas image exported',
+    exportSelectionOk: 'Selected components exported',
+    exportEmpty: 'Canvas is empty; nothing to export',
+    exportNoPlugin: 'Export plugin is not ready',
+    exportFailed: 'Failed to export image',
   },
 }

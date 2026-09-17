@@ -36,6 +36,14 @@ export const canvas = {
   minimap: {
     title: '导航',
     open: '打开小地图',
-    close: '关闭小地图',
+    close: '关闭',
+    menuAria: '小地图菜单',
+    fitAll: '显示所有',
+    exportImage: '导出图片',
+    exportOk: '已导出画布图片',
+    exportSelectionOk: '已导出选中组件图片',
+    exportEmpty: '画布为空，无法导出',
+    exportNoPlugin: '导出插件未就绪',
+    exportFailed: '导出图片失败',
   },
 }
