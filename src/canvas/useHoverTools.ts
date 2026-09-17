@@ -2,6 +2,9 @@
  * 悬停驱动的浮动操作栏（节点 / 连线共用）。
  * mouseenter 显示并经 toolsExclusive 互斥 claim；mouseleave 延迟隐藏；
  * 工具条自身悬停时取消隐藏。节点与连线同一时刻只显示一个。
+ *
+ * 连线仅绑定中间文字块；快速划过两条线或选中后 DOM 重绘时，用世代号 +
+ * elementFromPoint 避免旧 hide 定时器误清、或丢悬停后不再显示。
  */
 import { onUnmounted, ref, watch, type Ref } from 'vue'
 import type { LfInstance } from './lf-types'
@@ -66,6 +69,8 @@ export function useHoverTools(options: UseHoverToolsOptions) {
   /** 当前 claim 的世代；0 表示未持有 */
   let claimGen = 0
   let unsubExclusive: (() => void) | null = null
+  /** 最近指针位置，供延迟隐藏时探测是否仍在目标上 */
+  let lastPointer = { x: 0, y: 0 }
 
   const setPlaceAt = (fn: PlaceAtFn) => {
     placeAtFn = fn
@@ -102,11 +107,31 @@ export function useHoverTools(options: UseHoverToolsOptions) {
     if (id && gen) releaseCanvasTools(kind, id, gen)
   }
 
-  const scheduleHide = () => {
+  /**
+   * 延迟隐藏：捕获调度时的 id/gen，超时后若已切到其它目标则忽略，
+   * 避免快速 A→B 时 A 的定时器把 B 清掉。
+   */
+  const scheduleHide = (forId?: string | null) => {
     clearHideTimer()
+    const idAtSchedule = forId ?? targetId.value
+    const genAtSchedule = claimGen
+    if (!idAtSchedule || !genAtSchedule) return
     hideTimer = window.setTimeout(() => {
       hideTimer = 0
       if (overToolbar) return
+      // 已切到别的目标 / 新世代：本轮 hide 作废
+      if (targetId.value !== idAtSchedule || claimGen !== genAtSchedule) return
+
+      // 指针仍在连线文字块上（含 DOM 重绘后的新节点）：重新 show，勿藏
+      if (kind === 'edge') {
+        const under = document.elementFromPoint(lastPointer.x, lastPointer.y)
+        const text = under?.closest?.('.lf-line-text') as Element | null
+        const stillId = text?.getAttribute?.('data-edge-id')
+        if (stillId) {
+          showFor(stillId)
+          return
+        }
+      }
       hide()
     }, hideDelayMs)
   }
@@ -177,6 +202,13 @@ export function useHoverTools(options: UseHoverToolsOptions) {
   const showFor = (id: string) => {
     if (!id) return
     clearHideTimer()
+    // 同一目标已显示：只取消隐藏并校正位置，避免反复 claim 打乱世代
+    if (targetId.value === id && claimGen && visible.value) {
+      if (isCanvasToolsOwner(kind, id, claimGen)) {
+        reposition()
+        return
+      }
+    }
     // 先释放旧 id（同 kind 切换目标）
     if (targetId.value && claimGen && targetId.value !== id) {
       releaseCanvasTools(kind, targetId.value, claimGen)
@@ -196,7 +228,7 @@ export function useHoverTools(options: UseHoverToolsOptions) {
   const onLeave = (payload: { data?: { id?: string } }) => {
     const id = payload?.data?.id
     if (id && targetId.value && id !== targetId.value) return
-    scheduleHide()
+    scheduleHide(id || targetId.value)
   }
 
   const onDelete = (payload: { data?: { id?: string } }) => {
@@ -212,36 +244,47 @@ export function useHoverTools(options: UseHoverToolsOptions) {
     edgeTextDomCleanups = []
   }
 
+  const trackPointer = (e: MouseEvent) => {
+    lastPointer = { x: e.clientX, y: e.clientY }
+  }
+
   const attachEdgeTextDom = (lf: LfInstance) => {
     detachEdgeTextDom()
     const container = lf.container as HTMLElement | undefined | null
     if (!container) return
 
     const onOver = (e: MouseEvent) => {
+      trackPointer(e)
       const text = (e.target as Element | null)?.closest?.('.lf-line-text')
       if (!text) return
       const fromText = (e.relatedTarget as Element | null)?.closest?.(
         '.lf-line-text',
       )
+      // 仍在同一文字块内移动：忽略；跨到另一条线的文字块要切换
       if (fromText === text) return
       const id = text.getAttribute('data-edge-id')
       if (id) showFor(id)
     }
     const onOut = (e: MouseEvent) => {
+      trackPointer(e)
       const text = (e.target as Element | null)?.closest?.('.lf-line-text')
       if (!text) return
-      const to = e.relatedTarget as Node | null
+      const to = e.relatedTarget as Element | null
       if (to && text.contains(to)) return
+      // 直接划入另一条线的文字块：由对方 mouseover 接手，勿调度 hide
+      if (to?.closest?.('.lf-line-text')) return
       const id = text.getAttribute('data-edge-id')
       if (id && targetId.value && id !== targetId.value) return
-      scheduleHide()
+      scheduleHide(id)
     }
 
     container.addEventListener('mouseover', onOver)
     container.addEventListener('mouseout', onOut)
+    container.addEventListener('pointermove', trackPointer, { passive: true })
     edgeTextDomCleanups.push(() => {
       container.removeEventListener('mouseover', onOver)
       container.removeEventListener('mouseout', onOut)
+      container.removeEventListener('pointermove', trackPointer)
     })
   }
 
@@ -270,6 +313,21 @@ export function useHoverTools(options: UseHoverToolsOptions) {
       // 连线菜单只响应文字块 DOM 悬停，不监听 edge:mouseenter（整条线）
       attachEdgeTextDom(lf)
       boundHandlers['edge:delete'] = onDelete as (...args: unknown[]) => void
+      // 选中/重绘后文字块 DOM 可能重建，用 pointer 探测补回悬停
+      boundHandlers['edge:click'] = ((payload: {
+        data?: { id?: string }
+        e?: MouseEvent
+      }) => {
+        const ev = payload?.e
+        if (ev) trackPointer(ev)
+        // 下一帧再探测：等选中样式导致的 DOM 更新完成
+        requestAnimationFrame(() => {
+          const under = document.elementFromPoint(lastPointer.x, lastPointer.y)
+          const text = under?.closest?.('.lf-line-text') as Element | null
+          const id = text?.getAttribute?.('data-edge-id')
+          if (id) showFor(id)
+        })
+      }) as (...args: unknown[]) => void
     }
     boundHandlers['blank:click'] = () => hide()
     REPOSITION_EVENTS.forEach((evt) => {
