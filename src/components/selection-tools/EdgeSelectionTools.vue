@@ -59,7 +59,8 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const EDGE_PADDING = 4
-const GAP = 8
+/** 相对色块中心的间距（含半高补偿），视觉上与色块外缘约 10px */
+const GAP = 18
 
 const barRef = useTemplateRef<InstanceType<typeof SelectionActionBar>>('barRef')
 
