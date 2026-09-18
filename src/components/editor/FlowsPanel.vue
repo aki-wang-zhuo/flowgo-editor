@@ -138,6 +138,22 @@ function isOpen(id: string) {
   return props.openIds.includes(id)
 }
 
+/**
+ * 列表左侧圆点状态：上线 / 已发布未上线 / 未发布。
+ */
+function flowDotStatus(f: FlowRecord): 'online' | 'offline' | 'draft' {
+  if (f.published) return 'online'
+  if (f.hasPublishHistory) return 'offline'
+  return 'draft'
+}
+
+function flowDotTitle(f: FlowRecord): string {
+  const s = flowDotStatus(f)
+  if (s === 'online') return t('flows.dotOnline')
+  if (s === 'offline') return t('flows.dotOffline')
+  return t('flows.dotDraft')
+}
+
 /** 当前可见的全部分组 id（含未分组） */
 function allSectionIds(): string[] {
   return sections.value.map((s) => s.id)
@@ -498,7 +514,11 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
             :title="f.id"
             @click="emit('open', f)"
           >
-            <span class="flows__dot" :class="{ 'is-open': isOpen(f.id) }" />
+            <span
+              class="flows__dot"
+              :class="`is-${flowDotStatus(f)}`"
+              :title="flowDotTitle(f)"
+            />
             <span class="flows__name">{{ f.name || f.id }}</span>
             <span
               v-if="!f.published"
@@ -675,8 +695,17 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
   background: #bbb;
   flex-shrink: 0;
 }
-.flows__dot.is-open {
+/* 上线 */
+.flows__dot.is-online {
   background: #67c23a;
+}
+/* 已发布但未上线 */
+.flows__dot.is-offline {
+  background: #e6a23c;
+}
+/* 未发布（从未上线） */
+.flows__dot.is-draft {
+  background: #bbb;
 }
 .flows__name {
   flex: 1;
