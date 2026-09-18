@@ -7,8 +7,18 @@ export interface FlowGroup {
   id: string
   name: string
   sort: number
+  /** 系统分组（如垃圾箱），不可改名 / 删除 */
+  system?: boolean
   createdAt: string
   updatedAt: string
+}
+
+/** 系统垃圾箱分组固定 id（与后端 store.TrashGroupID 一致） */
+export const TRASH_GROUP_ID = '__trash__'
+
+export function isTrashGroup(g: Pick<FlowGroup, 'id' | 'system'> | string): boolean {
+  if (typeof g === 'string') return g === TRASH_GROUP_ID
+  return !!g.system || g.id === TRASH_GROUP_ID
 }
 
 export async function listFlowGroups() {

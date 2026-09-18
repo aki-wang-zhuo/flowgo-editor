@@ -4,7 +4,7 @@
  */
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { listFlowGroups, type FlowGroup } from '@/api/group'
+import { listFlowGroups, isTrashGroup, type FlowGroup } from '@/api/group'
 import { t as tGlobal } from '@/i18n'
 
 const { t } = useI18n()
@@ -24,7 +24,9 @@ const form = reactive({
 
 const groupOptions = computed(() => [
   { id: '', name: t('common.ungrouped') },
-  ...groups.value.map((g) => ({ id: g.id, name: g.name })),
+  ...groups.value
+    .filter((g) => !isTrashGroup(g))
+    .map((g) => ({ id: g.id, name: g.name })),
 ])
 
 async function loadGroups() {

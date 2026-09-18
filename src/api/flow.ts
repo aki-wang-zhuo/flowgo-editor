@@ -10,6 +10,8 @@ export interface FlowRecord {
   ownerId: string
   /** 空字符串或缺失表示未分组 */
   groupId?: string
+  /** 移入垃圾箱前的分组 id（恢复用） */
+  previousGroupId?: string
   /** 锁定后禁止画布修改与 MCP/API 保存删除 */
   locked?: boolean
   /** 是否设置了非空锁定密码（不回传密码） */
@@ -118,7 +120,20 @@ export async function deletePublishHistory(id: string, version: number) {
 }
 
 export async function deleteFlow(id: string) {
-  const { data } = await http.delete(`/flows/${encodeURIComponent(id)}`)
+  const { data } = await http.delete<{
+    status: string
+    action?: 'trashed' | 'purged'
+    flow?: FlowRecord
+  }>(`/flows/${encodeURIComponent(id)}`)
+  return data
+}
+
+/** 从垃圾箱恢复到原分组（不上线） */
+export async function restoreFlow(id: string) {
+  const { data } = await http.post<FlowRecord>(
+    `/flows/${encodeURIComponent(id)}/restore`,
+    {},
+  )
   return data
 }
 

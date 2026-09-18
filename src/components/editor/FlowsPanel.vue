@@ -8,7 +8,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Close, Expand, Fold, Lock, Plus, Refresh, Search, Unlock } from '@element-plus/icons-vue'
 import {
   deleteFlow,
+  goOnlineFlow,
   listFlows,
+  restoreFlow,
   setFlowGroup,
   setFlowLocked,
   type FlowRecord,
@@ -16,8 +18,10 @@ import {
 import {
   createFlowGroup,
   deleteFlowGroup,
+  isTrashGroup,
   listFlowGroups,
   renameFlowGroup,
+  TRASH_GROUP_ID,
   type FlowGroup,
 } from '@/api/group'
 import FlowItemMoreMenu from '@/components/editor/flows/FlowItemMoreMenu.vue'
@@ -34,8 +38,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   open: [flow: FlowRecord]
   create: []
-  /** 流程已从服务端删除，父级需关闭对应 Tab */
+  /** 流程已彻底删除，父级需关闭对应 Tab */
   deleted: [flowId: string]
+  /** 流程移入垃圾箱，父级关闭 Tab（仍可从垃圾箱打开） */
+  trashed: [flowId: string]
   /** 锁定状态变更，父级同步已打开画布只读态 */
   locked: [flow: FlowRecord]
 }>()
@@ -58,7 +64,10 @@ const filteredFlows = computed(() => {
   )
 })
 
-/** 按分组聚合后的区块列表（含空分组与未分组） */
+/** 用户自建分组（不含系统垃圾箱） */
+const userGroups = computed(() => groups.value.filter((g) => !isTrashGroup(g)))
+
+/** 按分组聚合：用户组 → 未分组 → 垃圾箱 */
 const sections = computed(() => {
   const list = filteredFlows.value
   const byGroup = new Map<string, FlowRecord[]>()
@@ -67,13 +76,20 @@ const sections = computed(() => {
     if (!byGroup.has(gid)) byGroup.set(gid, [])
     byGroup.get(gid)!.push(f)
   }
-  const out: { id: string; name: string; flows: FlowRecord[]; removable: boolean }[] = []
-  for (const g of groups.value) {
+  const out: {
+    id: string
+    name: string
+    flows: FlowRecord[]
+    removable: boolean
+    trash: boolean
+  }[] = []
+  for (const g of userGroups.value) {
     out.push({
       id: g.id,
       name: g.name,
       flows: byGroup.get(g.id) || [],
       removable: true,
+      trash: false,
     })
   }
   out.push({
@@ -81,6 +97,15 @@ const sections = computed(() => {
     name: t('common.ungrouped'),
     flows: byGroup.get(UNGROUPED) || [],
     removable: false,
+    trash: false,
+  })
+  const trashFlows = byGroup.get(TRASH_GROUP_ID) || []
+  out.push({
+    id: TRASH_GROUP_ID,
+    name: t('flows.trash'),
+    flows: trashFlows,
+    removable: false,
+    trash: true,
   })
   return out
 })
@@ -92,8 +117,8 @@ async function reload() {
     const [f, g] = await Promise.all([listFlows(), listFlowGroups()])
     flows.value = f
     groups.value = g
-    // 默认展开全部（含未分组）
-    const ids = [...g.map((x) => x.id), UNGROUPED]
+    // 默认展开全部（含未分组与垃圾箱）
+    const ids = [...userGroups.value.map((x) => x.id), UNGROUPED, TRASH_GROUP_ID]
     if (!expanded.value.length) {
       expanded.value = ids
     } else {
@@ -223,22 +248,74 @@ async function onDeleteFlow(f: FlowRecord, ev: Event) {
     ElMessage.warning(t('flows.lockedUnlockFirst'))
     return
   }
+  const inTrash = f.groupId === TRASH_GROUP_ID
   try {
     await ElMessageBox.confirm(
-      t('flows.deleteFlowConfirm', { name: f.name || f.id }),
-      t('flows.deleteFlowTitle'),
+      inTrash
+        ? t('flows.purgeFlowConfirm', { name: f.name || f.id })
+        : t('flows.deleteFlowConfirm', { name: f.name || f.id }),
+      inTrash ? t('flows.purgeFlowTitle') : t('flows.deleteFlowTitle'),
       {
         type: 'warning',
         confirmButtonText: t('common.delete'),
         cancelButtonText: t('common.cancel'),
       },
     )
-    await deleteFlow(f.id)
-    removeLocal(f.id)
-    emit('deleted', f.id)
+    const result = await deleteFlow(f.id)
+    if (result.action === 'purged' || inTrash) {
+      removeLocal(f.id)
+      emit('deleted', f.id)
+      ElMessage.success(t('flows.purged'))
+      return
+    }
+    if (result.flow) {
+      upsert(result.flow)
+    } else {
+      // 兜底：本地标为垃圾箱
+      upsert({ ...f, groupId: TRASH_GROUP_ID, published: false })
+    }
+    emit('trashed', f.id)
     ElMessage.success(t('flows.deleted'))
   } catch {
     /* 取消 */
+  }
+}
+
+/** 从垃圾箱恢复；若曾发布过则询问是否立即上线 */
+async function onRestoreFlow(f: FlowRecord, ev: Event) {
+  ev.stopPropagation()
+  if (f.locked) {
+    ElMessage.warning(t('flows.lockedUnlockFirst'))
+    return
+  }
+  try {
+    const updated = await restoreFlow(f.id)
+    upsert(updated)
+    ElMessage.success(t('flows.restored'))
+    // 未发布过（无历史）不提示上线
+    if (!updated.hasPublishHistory) return
+    try {
+      await ElMessageBox.confirm(
+        t('flows.restoreOnlinePrompt', { name: updated.name || updated.id }),
+        t('flows.restoreFlowTitle'),
+        {
+          type: 'info',
+          confirmButtonText: t('flows.restoreOnlineConfirm'),
+          cancelButtonText: t('flows.restoreOnlineSkip'),
+          distinguishCancelAndClose: true,
+        },
+      )
+      const online = await goOnlineFlow(updated.id)
+      upsert(online)
+    } catch (e: unknown) {
+      // 用户点「暂不上线」或关闭：不报错；真正上线失败再提示
+      const status = (e as { response?: { status?: number } })?.response?.status
+      if (status) {
+        ElMessage.error(t('flows.restoreOnlineFailed'))
+      }
+    }
+  } catch {
+    ElMessage.error(t('flows.moveFailed'))
   }
 }
 
@@ -386,7 +463,7 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
       {{ error }}
       <el-button link type="primary" size="small" @click="reload">{{ t('common.retry') }}</el-button>
     </div>
-    <div v-else-if="!sections.some((s) => s.flows.length) && !groups.length" class="flows__hint">
+    <div v-else-if="!sections.some((s) => s.flows.length) && !userGroups.length" class="flows__hint">
       {{ keyword.trim() ? t('flows.emptyMatch') : t('flows.empty') }}
     </div>
     <el-collapse v-else v-model="expanded" class="flows__groups">
@@ -447,16 +524,33 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
               </el-icon>
             </button>
             <FlowItemMoreMenu
+              v-if="f.groupId !== TRASH_GROUP_ID"
               :flow="f"
-              :groups="groups"
+              :groups="userGroups"
               @move="(gid) => onMoveFlow(f, gid)"
               @duplicate="onDuplicateFlow(f)"
               @copy-to="(gid) => onCopyFlowTo(f, gid)"
             />
             <button
+              v-if="f.groupId === TRASH_GROUP_ID"
+              class="flows__restore"
+              type="button"
+              :title="t('flows.restoreFlow')"
+              :disabled="!!f.locked"
+              @click="onRestoreFlow(f, $event)"
+            >
+              {{ t('flows.restoreFlow') }}
+            </button>
+            <button
               class="flows__x"
               type="button"
-              :title="f.locked ? t('flows.lockedCannotDelete') : t('flows.deleteFlow')"
+              :title="
+                f.locked
+                  ? t('flows.lockedCannotDelete')
+                  : f.groupId === TRASH_GROUP_ID
+                    ? t('flows.purgeFlowTitle')
+                    : t('flows.deleteFlow')
+              "
               :disabled="!!f.locked"
               @click="onDeleteFlow(f, $event)"
             >
@@ -652,6 +746,28 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
   background: rgba(245, 108, 108, 0.12);
 }
 .flows__x:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.flows__restore {
+  display: none;
+  border: none;
+  background: transparent;
+  color: #409eff;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 16px;
+  flex-shrink: 0;
+}
+.flows__item:hover .flows__restore {
+  display: inline;
+}
+.flows__restore:hover:not(:disabled) {
+  color: #337ecc;
+  text-decoration: underline;
+}
+.flows__restore:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }

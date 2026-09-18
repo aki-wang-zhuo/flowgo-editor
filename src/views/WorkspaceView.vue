@@ -160,6 +160,31 @@ function onWsFlowChanged(p: FlowChangedPayload) {
     return
   }
 
+  if (p.action === 'trashed') {
+    void (async () => {
+      try {
+        const full = await getFlow(p.id)
+        dockRef.value?.upsertFlow(full)
+      } catch {
+        dockRef.value?.removeFlow(p.id)
+      }
+      if (peek(p.id)) forceCloseTab(p.id)
+    })()
+    return
+  }
+
+  if (p.action === 'restored') {
+    void (async () => {
+      try {
+        const full = await getFlow(p.id)
+        dockRef.value?.upsertFlow(full)
+      } catch {
+        /* 忽略 */
+      }
+    })()
+    return
+  }
+
   // 锁定状态变更：同步列表与已打开画布只读态
   if (p.action === 'lock') {
     void (async () => {
@@ -947,6 +972,7 @@ function onComponentsChanged() {
         @open-flow="openRecord"
         @create-flow="onNew"
         @deleted-flow="onFlowDeleted"
+        @trashed-flow="onFlowDeleted"
         @locked-flow="onFlowLocked"
       />
       <div

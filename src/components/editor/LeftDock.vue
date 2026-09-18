@@ -23,6 +23,7 @@ const emit = defineEmits<{
   openFlow: [flow: FlowRecord]
   createFlow: []
   deletedFlow: [flowId: string]
+  trashedFlow: [flowId: string]
   lockedFlow: [flow: FlowRecord]
 }>()
 
@@ -57,6 +58,7 @@ defineExpose({
             @open="emit('openFlow', $event)"
             @create="emit('createFlow')"
             @deleted="emit('deletedFlow', $event)"
+            @trashed="emit('trashedFlow', $event)"
             @locked="emit('lockedFlow', $event)"
           />
         </el-collapse-item>
