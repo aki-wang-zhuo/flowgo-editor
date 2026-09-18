@@ -1,25 +1,19 @@
 <script setup lang="ts">
 /**
- * 画布右上角快捷栏：保存草稿 / 上线下线 / 发布菜单 / 刷新 / 自动布局 / 显示全部 / 控制台。
- * 上线=从历史最近已发布恢复；下线=撤销当前发布并卸载内存；与「发布草稿」菜单分离。
+ * 画布右上角快捷栏：保存 / 上下线 / 发布菜单 / 刷新 / 自动布局 / 显示全部 / 控制台。
+ * 图标统一使用项目 iconfont（非 Element Plus 图标）。
  */
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import {
-  DocumentChecked,
-  FullScreen,
-  Monitor,
-  Rank,
-  Refresh,
-  Upload,
-} from '@element-plus/icons-vue'
 import type { LfInstance } from '@/canvas/lf-types'
 import { layoutGraph } from '@/canvas/autoLayout'
 import {
   consoleVisible,
   toggleConsole,
 } from '@/console/useEditorConsole'
+import { ToolbarIcons } from '@/assets/iconfont/toolbarIcons'
+import IconfontIcon from '@/components/common/IconfontIcon.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -68,7 +62,7 @@ const busy = () =>
   props.saving || props.refreshing || props.publishing || props.togglingOnline
 
 /** 未发布且无历史时不可上线；锁定时不可切换 */
-const onlineSwitchDisabled = computed(() => {
+const onlineBtnDisabled = computed(() => {
   if (props.locked || busy()) return true
   if (props.published) return false
   return !props.hasPublishHistory
@@ -81,10 +75,11 @@ const onlineTooltip = computed(() => {
   return t('quickToolbar.goOnline')
 })
 
-function onOnlineSwitch(val: string | number | boolean) {
-  const on = val === true
-  if (on) emit('online')
-  else emit('offline')
+/** 点击指示灯：已上线则下线，否则上线 */
+function onOnlineClick() {
+  if (onlineBtnDisabled.value) return
+  if (props.published) emit('offline')
+  else emit('online')
 }
 
 function fitAllNodes() {
@@ -137,26 +132,28 @@ function onPublishCommand(cmd: string) {
       <el-button
         class="fg-quick-bar__btn"
         :class="{ 'is-dirty': dirty && !locked }"
-        :icon="DocumentChecked"
         circle
         :loading="saving"
         :disabled="busy() || locked"
         @click="emit('save')"
-      />
+      >
+        <IconfontIcon :name="ToolbarIcons.save" />
+      </el-button>
     </el-tooltip>
 
     <el-tooltip :content="onlineTooltip" placement="bottom" :show-after="300">
-      <div class="fg-quick-bar__switch" @click.stop>
-        <el-switch
-          :model-value="published"
-          inline-prompt
-          :active-text="t('quickToolbar.onlineShort')"
-          :inactive-text="t('quickToolbar.offlineShort')"
-          :disabled="onlineSwitchDisabled"
-          :loading="togglingOnline"
-          @change="onOnlineSwitch"
+      <el-button
+        class="fg-quick-bar__btn"
+        :class="{ 'is-online': published }"
+        circle
+        :loading="togglingOnline"
+        :disabled="onlineBtnDisabled"
+        @click="onOnlineClick"
+      >
+        <IconfontIcon
+          :name="published ? ToolbarIcons.online : ToolbarIcons.offline"
         />
-      </div>
+      </el-button>
     </el-tooltip>
 
     <el-tooltip
@@ -176,11 +173,12 @@ function onPublishCommand(cmd: string) {
         <el-button
           class="fg-quick-bar__btn"
           :class="{ 'is-publish': unpublishedChanges || !published }"
-          :icon="Upload"
           circle
           :loading="publishing"
           :disabled="busy()"
-        />
+        >
+          <IconfontIcon :name="ToolbarIcons.publish" />
+        </el-button>
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="publish" :disabled="locked">
@@ -203,12 +201,13 @@ function onPublishCommand(cmd: string) {
     <el-tooltip :content="t('quickToolbar.refresh')" placement="bottom" :show-after="300">
       <el-button
         class="fg-quick-bar__btn"
-        :icon="Refresh"
         circle
         :loading="refreshing"
         :disabled="busy()"
         @click="emit('refresh')"
-      />
+      >
+        <IconfontIcon :name="ToolbarIcons.refresh" />
+      </el-button>
     </el-tooltip>
     <el-tooltip
       :content="
@@ -221,20 +220,22 @@ function onPublishCommand(cmd: string) {
     >
       <el-button
         class="fg-quick-bar__btn"
-        :icon="Rank"
         circle
         :disabled="!lf || locked || busy()"
         @click="runAutoLayout"
-      />
+      >
+        <IconfontIcon :name="ToolbarIcons.autoLayout" />
+      </el-button>
     </el-tooltip>
     <el-tooltip :content="t('quickToolbar.fitView')" placement="bottom" :show-after="300">
       <el-button
         class="fg-quick-bar__btn"
-        :icon="FullScreen"
         circle
         :disabled="!lf"
         @click="fitAllNodes"
-      />
+      >
+        <IconfontIcon :name="ToolbarIcons.fitView" />
+      </el-button>
     </el-tooltip>
     <el-tooltip
       v-if="showConsole"
@@ -245,10 +246,11 @@ function onPublishCommand(cmd: string) {
       <el-button
         class="fg-quick-bar__btn"
         :class="{ 'is-active': consoleVisible }"
-        :icon="Monitor"
         circle
         @click="toggleConsole()"
-      />
+      >
+        <IconfontIcon :name="ToolbarIcons.console" />
+      </el-button>
     </el-tooltip>
   </div>
 </template>
@@ -276,6 +278,10 @@ function onPublishCommand(cmd: string) {
   background: transparent;
   color: #64748b;
 }
+.fg-quick-bar__btn :deep(.iconfont) {
+  font-size: 16px;
+  line-height: 1;
+}
 .fg-quick-bar__btn:hover,
 .fg-quick-bar__btn.is-active {
   background: #f1f5f9;
@@ -285,15 +291,18 @@ function onPublishCommand(cmd: string) {
 .fg-quick-bar__btn.is-publish {
   color: #e6a23c;
 }
+/** 已上线：指示灯高亮为绿色 */
+.fg-quick-bar__btn.is-online {
+  color: #67c23a;
+}
+.fg-quick-bar__btn.is-online:hover {
+  color: #529b2e;
+  background: #f0f9eb;
+}
 .fg-quick-bar__btn.is-disabled,
 .fg-quick-bar__btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-.fg-quick-bar__switch {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 4px;
 }
 .fg-quick-bar :deep(.el-button + .el-button) {
   margin-left: 0;

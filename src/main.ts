@@ -10,6 +10,7 @@ import App from './App.vue'
 import router from './router'
 import { setupI18n } from './i18n'
 import './styles/base.css'
+import './assets/iconfont/iconfont.css'
 
 const app = createApp(App)
 app.use(createPinia())
