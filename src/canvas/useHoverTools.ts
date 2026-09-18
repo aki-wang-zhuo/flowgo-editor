@@ -15,6 +15,7 @@ import {
   subscribeCanvasTools,
   type CanvasToolsKind,
 } from './toolsExclusive'
+import { isPaletteDndActive } from './suppressSpuriousBlankClick'
 
 export interface PlaceResult {
   x: number
@@ -71,6 +72,13 @@ export function useHoverTools(options: UseHoverToolsOptions) {
   let unsubExclusive: (() => void) | null = null
   /** 最近指针位置，供延迟隐藏时探测是否仍在目标上 */
   let lastPointer = { x: 0, y: 0 }
+  /**
+   * 调色板刚放下的节点：指针仍在其上时不弹浮动栏，
+   * 等 mouseleave 后再允许悬停显示。
+   */
+  const suppressHoverIds = new Set<string>()
+  /** 调色板放下后短宽限内也不弹栏（覆盖 mouseenter 早于 dnd-add 的竞态） */
+  let paletteDropGraceUntil = 0
 
   const setPlaceAt = (fn: PlaceAtFn) => {
     placeAtFn = fn
@@ -201,6 +209,11 @@ export function useHoverTools(options: UseHoverToolsOptions) {
 
   const showFor = (id: string) => {
     if (!id) return
+    // 调色板拖入落点时指针压在新节点上，勿立刻弹出顶部浮动栏
+    if (suppressHoverIds.has(id)) return
+    if (kind === 'node' && (isPaletteDndActive() || Date.now() < paletteDropGraceUntil)) {
+      return
+    }
     clearHideTimer()
     // 同一目标已显示：只取消隐藏并校正位置，避免反复 claim 打乱世代
     if (targetId.value === id && claimGen && visible.value) {
@@ -227,13 +240,24 @@ export function useHoverTools(options: UseHoverToolsOptions) {
 
   const onLeave = (payload: { data?: { id?: string } }) => {
     const id = payload?.data?.id
+    if (id) suppressHoverIds.delete(id)
     if (id && targetId.value && id !== targetId.value) return
     scheduleHide(id || targetId.value)
   }
 
   const onDelete = (payload: { data?: { id?: string } }) => {
     const id = payload?.data?.id
+    if (id) suppressHoverIds.delete(id)
     if (id && targetId.value === id) hide()
+  }
+
+  /** 调色板放下节点：隐藏浮动栏并抑制至指针离开该节点 */
+  const onDndAdd = (payload: { data?: { id?: string } }) => {
+    if (kind !== 'node') return
+    const id = payload?.data?.id
+    paletteDropGraceUntil = Date.now() + 600
+    if (id) suppressHoverIds.add(id)
+    hide()
   }
 
   /** 连线：仅绑定路径中间文字块（.lf-line-text），不绑整条执行线 */
@@ -309,6 +333,8 @@ export function useHoverTools(options: UseHoverToolsOptions) {
       boundHandlers['node:mouseenter'] = onEnter as (...args: unknown[]) => void
       boundHandlers['node:mouseleave'] = onLeave as (...args: unknown[]) => void
       boundHandlers['node:delete'] = onDelete as (...args: unknown[]) => void
+      // 调色板拖入：落点时勿弹出顶部浮动操作栏
+      boundHandlers['node:dnd-add'] = onDndAdd as (...args: unknown[]) => void
     } else {
       // 连线菜单只响应文字块 DOM 悬停，不监听 edge:mouseenter（整条线）
       attachEdgeTextDom(lf)

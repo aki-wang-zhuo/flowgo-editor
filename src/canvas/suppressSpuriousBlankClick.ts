@@ -21,7 +21,8 @@ export function clearPaletteDndActive() {
   })
 }
 
-function isPaletteDndActive(): boolean {
+/** 是否正在从组件库拖入节点 */
+export function isPaletteDndActive(): boolean {
   return document.documentElement.hasAttribute(PALETTE_DND_ATTR)
 }
 
