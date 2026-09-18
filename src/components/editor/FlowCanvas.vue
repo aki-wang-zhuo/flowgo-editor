@@ -36,6 +36,8 @@ const props = defineProps<{
   publishing?: boolean
   published?: boolean
   unpublishedChanges?: boolean
+  hasPublishHistory?: boolean
+  togglingOnline?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -48,6 +50,8 @@ const emit = defineEmits<{
   publish: []
   discard: []
   history: []
+  online: []
+  offline: []
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -251,14 +255,18 @@ defineExpose({ getGraphData, lf })
       :saving="saving"
       :refreshing="refreshing"
       :publishing="publishing"
+      :toggling-online="togglingOnline"
       :locked="locked"
       :published="published"
       :unpublished-changes="unpublishedChanges"
+      :has-publish-history="hasPublishHistory"
       @save="emit('save')"
       @refresh="emit('refresh')"
       @publish="emit('publish')"
       @discard="emit('discard')"
       @history="emit('history')"
+      @online="emit('online')"
+      @offline="emit('offline')"
       @graph-change="emit('graphChange')"
     />
     <CanvasMiniMap ref="minimapRef" :lf="lf" />

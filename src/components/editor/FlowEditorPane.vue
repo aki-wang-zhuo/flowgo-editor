@@ -25,6 +25,8 @@ const props = defineProps<{
   publishing?: boolean
   published?: boolean
   unpublishedChanges?: boolean
+  hasPublishHistory?: boolean
+  togglingOnline?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -36,6 +38,8 @@ const emit = defineEmits<{
   publish: [tabId: string]
   discard: [tabId: string]
   history: [tabId: string]
+  online: [tabId: string]
+  offline: [tabId: string]
 }>()
 
 const canvasRef = ref<InstanceType<typeof FlowCanvas> | null>(null)
@@ -102,6 +106,8 @@ defineExpose({
         :publishing="publishing"
         :published="published"
         :unpublished-changes="unpublishedChanges"
+        :has-publish-history="hasPublishHistory"
+        :toggling-online="togglingOnline"
         @ready="onReady"
         @select-node="onSelect"
         @graph-change="onGraphChange"
@@ -110,6 +116,8 @@ defineExpose({
         @publish="emit('publish', tabId)"
         @discard="emit('discard', tabId)"
         @history="emit('history', tabId)"
+        @online="emit('online', tabId)"
+        @offline="emit('offline', tabId)"
       />
     </div>
     <EditorConsole />

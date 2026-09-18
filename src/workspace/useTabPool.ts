@@ -26,6 +26,8 @@ export interface EditorTab {
   published?: boolean
   /** 已保存草稿相对线上有未发布改动 */
   unpublishedChanges?: boolean
+  /** 历史中有可恢复快照（未发布时可用于上线） */
+  hasPublishHistory?: boolean
   /**
    * 新建时选定的分组；首次保存成功后写入服务端并清空。
    * 空字符串 / undefined 表示未分组。
@@ -64,6 +66,7 @@ export function useTabPool() {
       revision: 1,
       published: false,
       unpublishedChanges: true,
+      hasPublishHistory: false,
       dsl: emptyDsl(id, title),
       pendingGroupId: groupId || undefined,
     }
@@ -86,6 +89,7 @@ export function useTabPool() {
       locked?: boolean
       published?: boolean
       unpublishedChanges?: boolean
+      hasPublishHistory?: boolean
     },
   ): EditorTab {
     const exist = tabs.value.find((t) => t.id === dsl.id)
@@ -109,6 +113,9 @@ export function useTabPool() {
       if (opts?.unpublishedChanges !== undefined) {
         exist.unpublishedChanges = opts.unpublishedChanges
       }
+      if (opts?.hasPublishHistory !== undefined) {
+        exist.hasPublishHistory = opts.hasPublishHistory
+      }
       activate(exist.id)
       return exist
     }
@@ -122,6 +129,7 @@ export function useTabPool() {
       locked: !!opts?.locked,
       published: !!opts?.published,
       unpublishedChanges: opts?.unpublishedChanges ?? !opts?.published,
+      hasPublishHistory: !!opts?.hasPublishHistory,
       dsl: {
         ...dsl,
         nodes: [...(dsl.nodes || [])],
@@ -141,13 +149,20 @@ export function useTabPool() {
 
   function setPublishMeta(
     id: string,
-    meta: { published?: boolean; unpublishedChanges?: boolean },
+    meta: {
+      published?: boolean
+      unpublishedChanges?: boolean
+      hasPublishHistory?: boolean
+    },
   ) {
     const t = tabs.value.find((x) => x.id === id)
     if (!t) return
     if (meta.published !== undefined) t.published = meta.published
     if (meta.unpublishedChanges !== undefined) {
       t.unpublishedChanges = meta.unpublishedChanges
+    }
+    if (meta.hasPublishHistory !== undefined) {
+      t.hasPublishHistory = meta.hasPublishHistory
     }
   }
 

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
- * 画布右上角快捷栏：保存草稿 / 发布菜单 / 刷新 / 自动布局 / 显示全部 / 控制台。
- * 发布相关（发布、放弃草稿、发布历史）收在同一下拉菜单。
+ * 画布右上角快捷栏：保存草稿 / 上线下线 / 发布菜单 / 刷新 / 自动布局 / 显示全部 / 控制台。
+ * 上线=从历史最近已发布恢复；下线=撤销当前发布并卸载内存；与「发布草稿」菜单分离。
  */
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import {
@@ -27,10 +28,12 @@ const props = withDefaults(
     saving?: boolean
     refreshing?: boolean
     publishing?: boolean
+    togglingOnline?: boolean
     showConsole?: boolean
     locked?: boolean
     published?: boolean
     unpublishedChanges?: boolean
+    hasPublishHistory?: boolean
   }>(),
   {
     lf: null,
@@ -38,10 +41,12 @@ const props = withDefaults(
     saving: false,
     refreshing: false,
     publishing: false,
+    togglingOnline: false,
     showConsole: true,
     locked: false,
     published: false,
     unpublishedChanges: false,
+    hasPublishHistory: false,
   },
 )
 
@@ -53,11 +58,34 @@ const emit = defineEmits<{
   publish: []
   discard: []
   history: []
+  online: []
+  offline: []
   /** 自动布局后通知父级同步 DSL / dirty */
   graphChange: []
 }>()
 
-const busy = () => props.saving || props.refreshing || props.publishing
+const busy = () =>
+  props.saving || props.refreshing || props.publishing || props.togglingOnline
+
+/** 未发布且无历史时不可上线；锁定时不可切换 */
+const onlineSwitchDisabled = computed(() => {
+  if (props.locked || busy()) return true
+  if (props.published) return false
+  return !props.hasPublishHistory
+})
+
+const onlineTooltip = computed(() => {
+  if (props.locked) return t('quickToolbar.onlineLocked')
+  if (props.published) return t('quickToolbar.goOffline')
+  if (!props.hasPublishHistory) return t('quickToolbar.onlineNeedHistory')
+  return t('quickToolbar.goOnline')
+})
+
+function onOnlineSwitch(val: string | number | boolean) {
+  const on = val === true
+  if (on) emit('online')
+  else emit('offline')
+}
 
 function fitAllNodes() {
   const lf = props.lf
@@ -116,6 +144,21 @@ function onPublishCommand(cmd: string) {
         @click="emit('save')"
       />
     </el-tooltip>
+
+    <el-tooltip :content="onlineTooltip" placement="bottom" :show-after="300">
+      <div class="fg-quick-bar__switch" @click.stop>
+        <el-switch
+          :model-value="published"
+          inline-prompt
+          :active-text="t('quickToolbar.onlineShort')"
+          :inactive-text="t('quickToolbar.offlineShort')"
+          :disabled="onlineSwitchDisabled"
+          :loading="togglingOnline"
+          @change="onOnlineSwitch"
+        />
+      </div>
+    </el-tooltip>
+
     <el-tooltip
       :content="
         locked
@@ -146,7 +189,11 @@ function onPublishCommand(cmd: string) {
             <el-dropdown-item command="discard" :disabled="locked || !published">
               {{ t('quickToolbar.discard') }}
             </el-dropdown-item>
-            <el-dropdown-item command="history" :disabled="!published" divided>
+            <el-dropdown-item
+              command="history"
+              :disabled="!published && !hasPublishHistory"
+              divided
+            >
               {{ t('quickToolbar.history') }}
             </el-dropdown-item>
           </el-dropdown-menu>
@@ -213,6 +260,7 @@ function onPublishCommand(cmd: string) {
   right: 10px;
   z-index: 15;
   display: flex;
+  align-items: center;
   gap: 4px;
   padding: 4px;
   background: #fff;
@@ -241,6 +289,11 @@ function onPublishCommand(cmd: string) {
 .fg-quick-bar__btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.fg-quick-bar__switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
 }
 .fg-quick-bar :deep(.el-button + .el-button) {
   margin-left: 0;

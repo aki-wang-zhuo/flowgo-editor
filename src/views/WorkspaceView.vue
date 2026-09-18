@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import type { LfInstance } from '@/canvas/lf-types'
-import { getFlow, saveFlow, setFlowGroup, publishFlow, discardDraft, type FlowRecord } from '@/api/flow'
+import { getFlow, saveFlow, setFlowGroup, publishFlow, discardDraft, goOfflineFlow, goOnlineFlow, type FlowRecord } from '@/api/flow'
 import { getMcpSettings } from '@/api/settings'
 import { dslToGraph, graphToDsl } from '@/canvas/adapter'
 import { useTabPool } from '@/workspace/useTabPool'
@@ -66,6 +66,7 @@ const selectedByTab = ref<Record<string, string | null>>({})
 
 const saving = ref(false)
 const publishing = ref(false)
+const togglingOnline = ref(false)
 const refreshing = ref(false)
 const historyOpen = ref(false)
 const createVisible = ref(false)
@@ -80,6 +81,7 @@ function flowOpenOpts(rec: FlowRecord) {
     locked: !!rec.locked,
     published: !!rec.published,
     unpublishedChanges: !!rec.unpublishedChanges,
+    hasPublishHistory: !!rec.hasPublishHistory,
   }
 }
 
@@ -88,6 +90,7 @@ function applyRecordMeta(rec: FlowRecord) {
   setPublishMeta(rec.id, {
     published: !!rec.published,
     unpublishedChanges: !!rec.unpublishedChanges,
+    hasPublishHistory: !!rec.hasPublishHistory,
   })
 }
 const activeLf = computed(() => {
@@ -738,6 +741,77 @@ function onHistory() {
   historyOpen.value = true
 }
 
+/** 上线：从历史最近已发布快照恢复并挂载 */
+async function onGoOnline(flowId?: string) {
+  const id = flowId || activeId.value
+  if (!id) {
+    ElMessage.info(t('workspace.openOrCreateFirst'))
+    return
+  }
+  const tab = peek(id)
+  if (!tab || tab.locked) {
+    ElMessage.warning(t('workspace.onlineLocked'))
+    return
+  }
+  if (tab.published) return
+  if (!tab.hasPublishHistory) {
+    ElMessage.warning(t('workspace.onlineNeedHistory'))
+    return
+  }
+  togglingOnline.value = true
+  try {
+    const rec = await goOnlineFlow(id)
+    applyRecordMeta(rec)
+    dockRef.value?.upsertFlow(rec)
+    ElMessage.success(t('workspace.onlineSuccess'))
+  } catch (e: unknown) {
+    const msg =
+      (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+      t('workspace.onlineFailed')
+    ElMessage.error(msg)
+  } finally {
+    togglingOnline.value = false
+  }
+}
+
+/** 下线：撤销当前发布并卸载内存 */
+async function onGoOffline(flowId?: string) {
+  const id = flowId || activeId.value
+  if (!id) {
+    ElMessage.info(t('workspace.openOrCreateFirst'))
+    return
+  }
+  const tab = peek(id)
+  if (!tab || tab.locked) {
+    ElMessage.warning(t('workspace.onlineLocked'))
+    return
+  }
+  if (!tab.published) return
+  try {
+    await ElMessageBox.confirm(t('workspace.offlineConfirm'), t('workspace.offlineTitle'), {
+      type: 'warning',
+      confirmButtonText: t('workspace.offlineConfirmBtn'),
+      cancelButtonText: t('common.cancel'),
+    })
+  } catch {
+    return
+  }
+  togglingOnline.value = true
+  try {
+    const rec = await goOfflineFlow(id)
+    applyRecordMeta(rec)
+    dockRef.value?.upsertFlow(rec)
+    ElMessage.success(t('workspace.offlineSuccess'))
+  } catch (e: unknown) {
+    const msg =
+      (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+      t('workspace.offlineFailed')
+    ElMessage.error(msg)
+  } finally {
+    togglingOnline.value = false
+  }
+}
+
 async function onRolledBack() {
   const id = activeId.value
   if (!id) return
@@ -760,6 +834,14 @@ function onPanePublish(tabId: string) {
 
 function onPaneDiscard(tabId: string) {
   void onDiscardDraft(tabId)
+}
+
+function onPaneOnline(tabId: string) {
+  void onGoOnline(tabId)
+}
+
+function onPaneOffline(tabId: string) {
+  void onGoOffline(tabId)
 }
 
 /** 快捷键：Ctrl+S 保存；Ctrl+Z 撤销；Ctrl+Shift+Z / Ctrl+Y 重做 */
@@ -885,8 +967,10 @@ function onComponentsChanged() {
           :locked="!!tab.locked"
           :published="!!tab.published"
           :unpublished-changes="!!tab.unpublishedChanges"
+          :has-publish-history="!!tab.hasPublishHistory"
           :saving="saving && tab.id === activeId"
           :publishing="publishing && tab.id === activeId"
+          :toggling-online="togglingOnline && tab.id === activeId"
           :refreshing="refreshing && tab.id === activeId"
           @ready="onPaneReady"
           @select-node="onSelectNode"
@@ -896,6 +980,8 @@ function onComponentsChanged() {
           @publish="onPanePublish"
           @discard="onPaneDiscard"
           @history="onHistory"
+          @online="onPaneOnline"
+          @offline="onPaneOffline"
         />
         <div v-if="!tabs.length" class="center__empty">
           {{ t('workspace.emptyHint') }}

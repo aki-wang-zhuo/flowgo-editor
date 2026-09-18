@@ -19,6 +19,8 @@ export interface FlowRecord {
   published?: boolean
   /** 草稿相对已发布有未发布改动 */
   unpublishedChanges?: boolean
+  /** 历史中是否有可恢复的已发布快照（下线后再上线依赖此项） */
+  hasPublishHistory?: boolean
   publishedAt?: string
   publishedVersion?: number
   updatedAt: string
@@ -46,6 +48,24 @@ export async function publishFlow(id: string, note?: string) {
   const { data } = await http.post<FlowRecord>(
     `/flows/${encodeURIComponent(id)}/publish`,
     { note: note || '' },
+  )
+  return data
+}
+
+/** 下线：撤销当前发布（归档进历史），从服务器内存卸载 */
+export async function goOfflineFlow(id: string) {
+  const { data } = await http.post<FlowRecord>(
+    `/flows/${encodeURIComponent(id)}/offline`,
+    {},
+  )
+  return data
+}
+
+/** 上线：从历史最近一条已发布快照恢复线上版 */
+export async function goOnlineFlow(id: string) {
+  const { data } = await http.post<FlowRecord>(
+    `/flows/${encodeURIComponent(id)}/online`,
+    {},
   )
   return data
 }
