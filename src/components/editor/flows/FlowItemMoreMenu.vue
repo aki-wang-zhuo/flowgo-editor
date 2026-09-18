@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
- * 流程列表项「···」菜单：移动到组、创建副本、复制副本到。
- * 分组选择以右侧悬停子菜单呈现；业务由父级处理。
+ * 流程列表项更多菜单：移动到组、创建副本、复制副本到。
+ * 触发按钮用竖向三点图标（MoreFilled），比文字 ··· 更易辨认。
  */
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, MoreFilled } from '@element-plus/icons-vue'
 import type { FlowRecord } from '@/api/flow'
 import type { FlowGroup } from '@/api/group'
 
@@ -38,7 +38,7 @@ function isCurrentGroup(groupId: string) {
       :title="t('flows.moreActions')"
       @click.stop
     >
-      ···
+      <el-icon :size="14"><MoreFilled /></el-icon>
     </button>
     <template #dropdown>
       <el-dropdown-menu class="more-menu">
@@ -116,17 +116,21 @@ function isCurrentGroup(groupId: string) {
 <style scoped>
 .more {
   display: none;
+  width: 16px;
+  height: 16px;
   border: none;
+  border-radius: 2px;
   background: transparent;
-  color: #888;
+  color: #666;
   cursor: pointer;
-  padding: 0 2px;
-  font-size: 12px;
-  line-height: 1;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  padding: 0;
 }
 .more:hover {
   color: #409eff;
+  background: rgba(64, 158, 255, 0.12);
 }
 
 /* 嵌套项去掉默认内边距，由内层 row 控制 */
@@ -138,7 +142,6 @@ function isCurrentGroup(groupId: string) {
   display: block;
   width: 100%;
 }
-
 .more-menu__row {
   display: flex;
   align-items: center;
@@ -164,8 +167,8 @@ function isCurrentGroup(groupId: string) {
 </style>
 
 <style>
-/* 父级流程行 hover 时显示 ··· */
+/* 父级流程行 hover 时显示更多按钮 */
 .flows__item:hover .more {
-  display: inline-block;
+  display: inline-flex;
 }
 </style>

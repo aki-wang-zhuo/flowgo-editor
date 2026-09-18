@@ -5,7 +5,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Close, Expand, Fold, Lock, Plus, Refresh, Search, Unlock } from '@element-plus/icons-vue'
+import { Close, Delete, Expand, Fold, Lock, Plus, Refresh, Search, Unlock } from '@element-plus/icons-vue'
 import {
   deleteFlow,
   goOnlineFlow,
@@ -574,7 +574,7 @@ defineExpose({ reload, upsert, hasFlow, removeLocal })
               :disabled="!!f.locked"
               @click="onDeleteFlow(f, $event)"
             >
-              <el-icon :size="12"><Close /></el-icon>
+              <el-icon :size="12"><Delete /></el-icon>
             </button>
           </li>
           <li v-if="!sec.flows.length" class="flows__empty">{{ t('flows.emptyInGroup') }}</li>
