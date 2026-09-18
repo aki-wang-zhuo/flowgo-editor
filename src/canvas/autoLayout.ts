@@ -7,23 +7,23 @@
  *
  * 作用域：有选中节点 → 仅布局选中；无选中 → 全量。
  * 入口类节点（httpEndpoint / inject）钉在布局起点侧（LR=左侧）。
+ *
+ * 并发分组：组框作为顶层单元参与布局；组内子节点单独在框内排布，避免跑出组外。
+ * 移动分组会经 DynamicGroup.getMoveDistance 带动子节点。
  */
-import dagre from '@dagrejs/dagre'
 import type { LfInstance } from './lf-types'
+import { layoutGroupInterior } from './autoLayoutGroup'
+import {
+  AUTO_LAYOUT_DEFAULTS,
+  GROUP_TYPE,
+  bbox,
+  nodeGeom,
+  runDagre,
+  type NodeGeom,
+} from './autoLayoutShared'
 
 /** 数据入口节点类型（仅出边） */
 const ENTRY_TYPES = new Set(['httpEndpoint', 'inject'])
-
-/** 默认布局参数（左→右；间隔需容纳边上路径标签） */
-export const AUTO_LAYOUT_DEFAULTS = {
-  rankdir: 'LR' as 'LR' | 'TB',
-  /** 层间距（LR 下为左右间距），过小会遮挡边标签 */
-  ranksep: 180,
-  /** 同层节点间距（LR 下为上下间距，Success/Failure 分支） */
-  nodesep: 80,
-  marginx: 30,
-  marginy: 30,
-}
 
 export type AutoLayoutOpts = Partial<typeof AUTO_LAYOUT_DEFAULTS>
 
@@ -36,80 +36,50 @@ export interface AutoLayoutResult {
   entryCount?: number
 }
 
-interface NodeGeom {
+export { AUTO_LAYOUT_DEFAULTS }
+
+type GmNode = {
   id: string
-  type: string
-  x: number
-  y: number
-  width: number
-  height: number
+  type?: string
+  isGroup?: boolean
+  children?: Set<string> | string[]
+  getData?: () => Record<string, unknown>
+  properties?: Record<string, unknown>
 }
 
-interface BBox {
-  minX: number
-  minY: number
-  maxX: number
-  maxY: number
-}
-
-/** 从实时 model 读取几何（getData 顶层常缺 width/height） */
-function nodeGeom(lf: LfInstance, n: { id: string; type?: string; x?: number; y?: number; width?: number; height?: number; properties?: Record<string, unknown> }): NodeGeom {
-  const m = lf.getNodeModelById?.(n.id) as
-    | { x?: number; y?: number; width?: number; height?: number; type?: string }
-    | undefined
-  const w =
-    (m && m.width) ||
-    n.width ||
-    Number((n.properties as { width?: number } | undefined)?.width) ||
-    120
-  const h =
-    (m && m.height) ||
-    n.height ||
-    Number((n.properties as { height?: number } | undefined)?.height) ||
-    40
-  return {
-    id: n.id,
-    type: (m && m.type) || n.type || '',
-    x: m && m.x != null ? m.x : Number(n.x) || 0,
-    y: m && m.y != null ? m.y : Number(n.y) || 0,
-    width: w,
-    height: h,
+/**
+ * 建立「子节点 → 所属分组」映射（优先 children，其次 properties.parentId）。
+ */
+function buildChildToGroup(lf: LfInstance): Map<string, string> {
+  const map = new Map<string, string>()
+  const nodes = (lf.graphModel?.nodes || []) as GmNode[]
+  for (const n of nodes) {
+    if (!n?.id) continue
+    const children = n.children
+      ? Array.from(n.children as Set<string> | string[])
+      : []
+    for (const cid of children) {
+      if (cid) map.set(String(cid), n.id)
+    }
   }
-}
-
-function bbox(items: Array<{ x: number; y: number; width: number; height: number }>): BBox {
-  return {
-    minX: Math.min(...items.map((p) => p.x - p.width / 2)),
-    minY: Math.min(...items.map((p) => p.y - p.height / 2)),
-    maxX: Math.max(...items.map((p) => p.x + p.width / 2)),
-    maxY: Math.max(...items.map((p) => p.y + p.height / 2)),
+  for (const n of nodes) {
+    if (!n?.id || map.has(n.id)) continue
+    const data = n.getData?.() || n
+    const props = (data as { properties?: Record<string, unknown> }).properties || {}
+    const pid = String(props.parentId || '').trim()
+    if (pid) map.set(n.id, pid)
   }
-}
-
-function runDagre(
-  nodes: Array<{ id: string; width: number; height: number }>,
-  edges: Array<{ source: string; target: string }>,
-  opts: { rankdir: string; ranksep: number; nodesep: number; marginx: number; marginy: number },
-): Map<string, { x: number; y: number; width: number; height: number }> {
-  const g = new dagre.graphlib.Graph()
-  g.setGraph(opts)
-  g.setDefaultEdgeLabel(() => ({}))
-  nodes.forEach((n) => g.setNode(n.id, { width: n.width, height: n.height }))
-  edges.forEach((e) => g.setEdge(e.source, e.target))
-  dagre.layout(g)
-  const out = new Map<string, { x: number; y: number; width: number; height: number }>()
-  nodes.forEach((n) => {
-    const r = g.node(n.id) as { x: number; y: number }
-    out.set(n.id, { x: r.x, y: r.y, width: n.width, height: n.height })
-  })
-  return out
+  return map
 }
 
 /**
  * 对当前画布执行自动布局。
  * @returns 结果摘要；ok=false 时带 reason
  */
-export function layoutGraph(lf: LfInstance | null | undefined, opts: AutoLayoutOpts = {}): AutoLayoutResult {
+export function layoutGraph(
+  lf: LfInstance | null | undefined,
+  opts: AutoLayoutOpts = {},
+): AutoLayoutResult {
   const gm = lf?.graphModel
   if (!lf || !gm) return { ok: false, reason: 'no graphModel' }
 
@@ -117,22 +87,37 @@ export function layoutGraph(lf: LfInstance | null | undefined, opts: AutoLayoutO
   const isLR = profile.rankdir !== 'TB'
   profile.rankdir = isLR ? 'LR' : 'TB'
 
+  const childToGroup = buildChildToGroup(lf)
+
   const sel = lf.getSelectElements?.() as { nodes?: Array<{ id: string }> } | undefined
   const selNodes = sel?.nodes || []
   const scoped = selNodes.length > 0
+
+  // 选中子节点时抬升为所属分组，避免只排子节点把它们甩出组外
+  const seedIds = new Set<string>()
+  if (scoped) {
+    for (const n of selNodes) {
+      const gid = childToGroup.get(n.id)
+      seedIds.add(gid || n.id)
+    }
+  }
+
   const dataNodes = scoped
-    ? selNodes
-    : ((gm.nodes || []) as Array<{ getData?: () => Record<string, unknown> }>).map(
-        (n) => n.getData?.() || n,
-      )
+    ? [...seedIds].map((id) => {
+        const m = lf.getNodeModelById?.(id) as GmNode | undefined
+        return m ? ((m.getData?.() || m) as Record<string, unknown>) : { id }
+      })
+    : ((gm.nodes || []) as GmNode[]).map((n) => n.getData?.() || n)
 
   const geoms = dataNodes
     .map((n) => nodeGeom(lf, n as Parameters<typeof nodeGeom>[1]))
     .filter((n) => n.id)
+    // 顶层布局排除组内子节点（子节点随组移动 / 组内单独排布）
+    .filter((n) => !childToGroup.has(n.id))
+
   if (geoms.length === 0) return { ok: false, reason: 'no nodes' }
 
   const entryNodes = geoms.filter((n) => ENTRY_TYPES.has(n.type))
-  // 非入口节点参与 dagre；入口钉到起点侧
   const layoutNodes = geoms.filter((n) => !ENTRY_TYPES.has(n.type))
   if (layoutNodes.length === 0) {
     return {
@@ -145,9 +130,25 @@ export function layoutGraph(lf: LfInstance | null | undefined, opts: AutoLayoutO
   }
 
   const layoutIds = new Set(layoutNodes.map((n) => n.id))
-  const edges = ((gm.edges || []) as Array<{ sourceNodeId: string; targetNodeId: string }>)
-    .map((e) => ({ source: e.sourceNodeId, target: e.targetNodeId }))
-    .filter((e) => layoutIds.has(e.source) && layoutIds.has(e.target))
+
+  /** 边端点提升到顶层：子节点 → 所属分组 */
+  const topId = (id: string) => childToGroup.get(id) || id
+
+  const edgeKeys = new Set<string>()
+  const edges: Array<{ source: string; target: string }> = []
+  for (const e of (gm.edges || []) as Array<{
+    sourceNodeId: string
+    targetNodeId: string
+  }>) {
+    const s = topId(e.sourceNodeId)
+    const t = topId(e.targetNodeId)
+    if (s === t) continue // 组内边不参与顶层
+    if (!layoutIds.has(s) || !layoutIds.has(t)) continue
+    const key = `${s}->${t}`
+    if (edgeKeys.has(key)) continue
+    edgeKeys.add(key)
+    edges.push({ source: s, target: t })
+  }
 
   const pos = runDagre(layoutNodes, edges, {
     rankdir: profile.rankdir,
@@ -163,6 +164,7 @@ export function layoutGraph(lf: LfInstance | null | undefined, opts: AutoLayoutO
   const offX = sBox.minX - dBox.minX
   const offY = sBox.minY - dBox.minY
 
+  // 先移组框（会带动子节点），再做组内排布
   layoutNodes.forEach((n) => {
     const p = pos.get(n.id)
     if (!p) return
@@ -170,32 +172,12 @@ export function layoutGraph(lf: LfInstance | null | undefined, opts: AutoLayoutO
   })
 
   // 入口钉在 dagre 结果起点侧
-  if (entryNodes.length && dVals.length) {
-    const movedVals = dVals.map((p) => ({
-      x: p.x + offX,
-      y: p.y + offY,
-      width: p.width,
-      height: p.height,
-    }))
-    const gap = profile.ranksep
-    if (isLR) {
-      const left = Math.min(...movedVals.map((p) => p.x - p.width / 2))
-      const topY = sBox.minY
-      const spanY = sBox.maxY - sBox.minY
-      const stepY = entryNodes.length > 1 ? spanY / (entryNodes.length - 1) : 0
-      entryNodes.forEach((n, i) => {
-        const y = entryNodes.length > 1 ? topY + stepY * i : (sBox.minY + sBox.maxY) / 2
-        gm.moveNode2Coordinate(n.id, left - gap - n.width / 2, y, true)
-      })
-    } else {
-      const top = Math.min(...movedVals.map((p) => p.y - p.height / 2))
-      const leftX = sBox.minX
-      const spanX = sBox.maxX - sBox.minX
-      const stepX = entryNodes.length > 1 ? spanX / (entryNodes.length - 1) : 0
-      entryNodes.forEach((n, i) => {
-        const x = entryNodes.length > 1 ? leftX + stepX * i : (sBox.minX + sBox.maxX) / 2
-        gm.moveNode2Coordinate(n.id, x, top - gap - n.height / 2, true)
-      })
+  pinEntryNodes(gm, entryNodes, dVals, sBox, offX, offY, profile.ranksep, isLR)
+
+  // 组内子节点重新排布到框内
+  for (const n of layoutNodes) {
+    if (n.type === GROUP_TYPE) {
+      layoutGroupInterior(lf, n.id, profile)
     }
   }
 
@@ -207,6 +189,45 @@ export function layoutGraph(lf: LfInstance | null | undefined, opts: AutoLayoutO
     nodeCount: layoutNodes.length,
     edgeCount: edges.length,
     entryCount: entryNodes.length,
+  }
+}
+
+/** 入口节点钉在布局起点侧 */
+function pinEntryNodes(
+  gm: NonNullable<LfInstance['graphModel']>,
+  entryNodes: NodeGeom[],
+  dVals: Array<{ x: number; y: number; width: number; height: number }>,
+  sBox: { minX: number; minY: number; maxX: number; maxY: number },
+  offX: number,
+  offY: number,
+  gap: number,
+  isLR: boolean,
+) {
+  if (!entryNodes.length || !dVals.length) return
+  const movedVals = dVals.map((p) => ({
+    x: p.x + offX,
+    y: p.y + offY,
+    width: p.width,
+    height: p.height,
+  }))
+  if (isLR) {
+    const left = Math.min(...movedVals.map((p) => p.x - p.width / 2))
+    const topY = sBox.minY
+    const spanY = sBox.maxY - sBox.minY
+    const stepY = entryNodes.length > 1 ? spanY / (entryNodes.length - 1) : 0
+    entryNodes.forEach((n, i) => {
+      const y = entryNodes.length > 1 ? topY + stepY * i : (sBox.minY + sBox.maxY) / 2
+      gm.moveNode2Coordinate(n.id, left - gap - n.width / 2, y, true)
+    })
+  } else {
+    const top = Math.min(...movedVals.map((p) => p.y - p.height / 2))
+    const leftX = sBox.minX
+    const spanX = sBox.maxX - sBox.minX
+    const stepX = entryNodes.length > 1 ? spanX / (entryNodes.length - 1) : 0
+    entryNodes.forEach((n, i) => {
+      const x = entryNodes.length > 1 ? leftX + stepX * i : (sBox.minX + sBox.maxX) / 2
+      gm.moveNode2Coordinate(n.id, x, top - gap - n.height / 2, true)
+    })
   }
 }
 

@@ -16,6 +16,7 @@ import {
 } from '@/canvas/componentDocCache'
 import { syncHttpEndpointNode } from '@/canvas/useHttpEndpointEdges'
 import { syncSwitchNode } from '@/canvas/useBranchEdges'
+import { syncConcurrentGroupNode } from '@/canvas/useConcurrentGroupEdges'
 import type { ConfigField } from '@/types/flow'
 import DynamicConfigForm from './dynamic/DynamicConfigForm.vue'
 import MarkdownView from '@/components/common/MarkdownView.vue'
@@ -181,6 +182,9 @@ function onConfigChange(v: Record<string, unknown>) {
   }
   if (form.type === 'switch') {
     syncSwitchNode(props.lf, props.nodeId)
+  }
+  if (form.type === 'concurrentGroup') {
+    syncConcurrentGroupNode(props.lf, props.nodeId)
   }
   emit('change')
 }

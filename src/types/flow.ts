@@ -17,6 +17,8 @@ export interface FlowNode {
   name?: string
   /** 开启后调试运行会把该节点入/出消息打到控制台，默认 false */
   debug?: boolean
+  /** 所属并发分组（或其他容器）节点 id；空表示顶层 */
+  parentId?: string
   /** 画布坐标，引擎执行忽略 */
   x?: number
   y?: number
@@ -42,7 +44,7 @@ export interface ConfigField {
   /** 开关旁补充说明 */
   hint?: string
   /**
-   * text | textarea | code-json | code-js | switch | number | select | router-list | var-list | case-list；
+   * text | textarea | code-json | code-js | switch | number | select | router-list | var-list | case-list | branch-list；
    * 空则按 type 推断。routers 数组即使标 code-json 也会被前端识别为 router-list。
    */
   widget?: string

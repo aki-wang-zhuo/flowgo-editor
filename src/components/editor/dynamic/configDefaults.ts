@@ -16,6 +16,10 @@ import {
   normalizeSwitchCaseList,
   parseSwitchCaseList,
 } from './switchCaseList'
+import {
+  coerceBranchListForEdit,
+  parseBranchList,
+} from './branchList'
 import { resolveWidget } from './resolveWidget'
 
 /** 将后端 Default 字符串按字段类型转为运行时值 */
@@ -28,6 +32,7 @@ export function parseFieldDefault(field: ConfigField): unknown {
     if (w === 'router-list') return parseRouterList([])
     if (w === 'var-list') return parseGlobalVarList([])
     if (w === 'case-list') return [createDefaultSwitchCase()]
+    if (w === 'branch-list') return [{ name: 'branch1' }, { name: 'branch2' }]
     if (field.type === 'object') return {}
     if (field.type === 'array') return []
     return ''
@@ -42,6 +47,10 @@ export function parseFieldDefault(field: ConfigField): unknown {
   if (w === 'case-list') {
     const list = parseSwitchCaseList(raw)
     return list.length ? list : [createDefaultSwitchCase()]
+  }
+  if (w === 'branch-list') {
+    const list = parseBranchList(raw)
+    return list.length ? list : [{ name: 'branch1' }, { name: 'branch2' }]
   }
   const t = (field.type || '').toLowerCase()
   if (t === 'boolean') {
@@ -97,6 +106,10 @@ export function readFieldDisplayValue(
     const list = parseSwitchCaseList(raw)
     return list.length ? list : [createDefaultSwitchCase()]
   }
+  if (w === 'branch-list') {
+    // 保留空行，避免「添加线路」后被规范化清掉
+    return coerceBranchListForEdit(raw)
+  }
   if (w === 'code-json' || w === 'code-js') {
     if (typeof raw === 'string') return raw
     try {
@@ -145,6 +158,12 @@ export function writeFieldValue(field: ConfigField, uiValue: unknown): unknown {
     return list.length
       ? list
       : [{ value: 'a', type: 'string' as const, name: '' }]
+  }
+  if (w === 'branch-list') {
+    // 写回配置时保留空行，便于继续编辑；出边同步仍用 normalizeBranchList 去空
+    return coerceBranchListForEdit(
+      Array.isArray(uiValue) ? uiValue : parseBranchList(uiValue),
+    )
   }
   if (w === 'switch') return !!uiValue
   if (w === 'number') {

@@ -13,6 +13,10 @@ import { bindSilentSuccessEdgeRules } from '@/canvas/useSilentSuccessEdges'
 import { bindEdgeDirectionNormalize } from '@/canvas/useEdgeDirection'
 import { bindInsertNodeOnEdge } from '@/canvas/useInsertNodeOnEdge'
 import { bindSuppressSpuriousBlankClick } from '@/canvas/suppressSpuriousBlankClick'
+import {
+  bindConcurrentGroupEdgeRules,
+} from '@/canvas/useConcurrentGroupEdges'
+import { bindConcurrentGroupAutoJoin } from '@/canvas/useConcurrentGroup'
 import { dslToGraph, type LfGraphData } from '@/canvas/adapter'
 import type { LfInstance } from '@/canvas/lf-types'
 import type { FlowDSL } from '@/types/flow'
@@ -70,6 +74,8 @@ let disposeJsEdges: (() => void) | undefined
 let disposeSilentEdges: (() => void) | undefined
 let disposeInsertOnEdge: (() => void) | undefined
 let disposeSpuriousBlank: (() => void) | undefined
+let disposeCgEdges: (() => void) | undefined
+let disposeCgAutoJoin: (() => void) | undefined
 
 onMounted(() => {
   ensureRunnersRegistered()
@@ -82,6 +88,8 @@ onMounted(() => {
   disposeBranchEdges = bindBranchEdgeRules(lf.value)
   disposeJsEdges = bindJsTransformEdgeRules(lf.value)
   disposeSilentEdges = bindSilentSuccessEdgeRules(lf.value)
+  disposeCgEdges = bindConcurrentGroupEdgeRules(lf.value)
+  disposeCgAutoJoin = bindConcurrentGroupAutoJoin(lf.value)
   disposeInsertOnEdge = bindInsertNodeOnEdge(lf.value)
   disposeSpuriousBlank = bindSuppressSpuriousBlankClick(containerRef.value)
   emit('ready', lf.value)
@@ -103,6 +111,10 @@ onBeforeUnmount(() => {
   disposeJsEdges = undefined
   disposeSilentEdges?.()
   disposeSilentEdges = undefined
+  disposeCgEdges?.()
+  disposeCgEdges = undefined
+  disposeCgAutoJoin?.()
+  disposeCgAutoJoin = undefined
   disposeInsertOnEdge?.()
   disposeInsertOnEdge = undefined
   disposeSpuriousBlank?.()
@@ -131,10 +143,16 @@ function applyLockMode(locked: boolean) {
   if (!instance?.updateEditConfig) return
   instance.updateEditConfig({ isSilentMode: locked })
   // 静默模式默认 stopScrollGraph=false（滚轮变平移）；恢复为滚轮缩放
+  // 解锁时显式恢复 allowResize（并发分组拖边改宽高）
   if (locked) {
     instance.updateEditConfig({
       stopScrollGraph: true,
       stopZoomGraph: false,
+    })
+  } else {
+    instance.updateEditConfig({
+      stopScrollGraph: true,
+      allowResize: true,
     })
   }
 }

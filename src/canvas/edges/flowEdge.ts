@@ -9,6 +9,10 @@ import {
   INSERT_HIGHLIGHT_KEY,
   type BezierPoint,
 } from "../bezier";
+import {
+  CG_ANCHOR,
+  cgAnchorRole,
+} from "../nodes/concurrentGroupStyle";
 import "./flowEdge.css";
 
 const COLOR_NORMAL = "#999";
@@ -56,6 +60,33 @@ class FlowEdgeModel extends BezierEdgeModel {
       this.text.editable = false;
       this.text.draggable = false;
     }
+  }
+
+  /**
+   * 组内 fork / 汇聚锚点：LF 默认按包围盒外法线外扩控制点，会绕出框外。
+   * fork 强制向右（组内扇出），汇聚强制从左侧接入。
+   */
+  getControls(): { sNext: BezierPoint; ePre: BezierPoint } {
+    const base = super.getControls() as { sNext: BezierPoint; ePre: BezierPoint };
+    const start = this.startPoint;
+    const end = this.endPoint;
+    if (!start || !end) return base;
+
+    const srcRole = cgAnchorRole(this.sourceAnchorId);
+    const tgtRole = cgAnchorRole(this.targetAnchorId);
+    const pull = Math.max(48, Number(this.offset) || 80);
+
+    let sNext = base.sNext;
+    let ePre = base.ePre;
+
+    if (srcRole === CG_ANCHOR.fork) {
+      sNext = { x: start.x + pull, y: start.y };
+    }
+    if (tgtRole === CG_ANCHOR.joinOk || tgtRole === CG_ANCHOR.joinFail) {
+      ePre = { x: end.x - pull, y: end.y };
+    }
+
+    return { sNext, ePre };
   }
 
   /**

@@ -7,6 +7,8 @@ import { graphToDsl, type LfGraphData } from '@/canvas/adapter'
 import { cachedComponentMeta } from '@/canvas/componentCatalog'
 import { syncHttpEndpointNode } from '@/canvas/useHttpEndpointEdges'
 import { syncSwitchNode } from '@/canvas/useBranchEdges'
+import { syncConcurrentGroupNode } from '@/canvas/useConcurrentGroupEdges'
+import { ensureConcurrentGroupJoins } from '@/canvas/useConcurrentGroup'
 import { buildDefaultsFromFields } from '@/components/editor/dynamic/configDefaults'
 
 /** 节点补丁项 */
@@ -19,6 +21,8 @@ export interface PatchNodeItem {
   debug?: boolean
   x?: number
   y?: number
+  /** 所属并发分组 id */
+  parentId?: string
   configuration?: Record<string, unknown>
   /** true 时 configuration 整体替换；默认与现有浅合并 */
   replaceConfiguration?: boolean
@@ -193,21 +197,33 @@ export function applyActiveFlowPatch(opts: {
         n.configuration ||
         buildDefaultsFromFields(meta?.configFields, meta?.defaultScript)
       const name = n.name || meta?.label || n.type
+      const props: Record<string, unknown> = {
+        name,
+        configuration: conf,
+        isEntry: false,
+        debug: !!n.debug,
+        color: meta?.color || '#fdd0a2',
+        iconText: meta?.iconText || 'ƒ',
+      }
+      if (n.parentId) props.parentId = n.parentId
       lf.addNode?.({
         id: n.id,
         type: n.type,
         x: n.x ?? 200,
         y: n.y ?? 200,
         text: name,
-        properties: {
-          name,
-          configuration: conf,
-          isEntry: false,
-          debug: !!n.debug,
-          color: meta?.color || '#fdd0a2',
-          iconText: meta?.iconText || 'ƒ',
-        },
+        properties: props,
       })
+      if (n.parentId) {
+        const group = lf.getNodeModelById?.(n.parentId) as
+          | { addChild?: (id: string) => void; type?: string }
+          | undefined
+        group?.addChild?.(n.id)
+      }
+      if (n.type === 'concurrentGroup') {
+        ensureConcurrentGroupJoins(lf, n.id)
+        syncConcurrentGroupNode(lf, n.id)
+      }
       const snap = readNodeSnapshot(lf, n.id)
       if (snap) appliedNodes.push(snap)
       continue
@@ -258,6 +274,9 @@ export function applyActiveFlowPatch(opts: {
     }
     if (model.type === 'switch') {
       syncSwitchNode(lf, n.id)
+    }
+    if (model.type === 'concurrentGroup') {
+      syncConcurrentGroupNode(lf, n.id)
     }
     const snap = readNodeSnapshot(lf, n.id)
     if (snap) appliedNodes.push(snap)

@@ -12,6 +12,15 @@ import {
   branchRelationLabel,
   readSwitchCases,
 } from './branchRouter'
+import {
+  concurrentExitRelations,
+  readConcurrentBranches,
+} from './useConcurrentGroupEdges'
+import {
+  CG_ANCHOR,
+  CG_DEFAULT_HEIGHT,
+  CG_DEFAULT_WIDTH,
+} from './nodes/concurrentGroupStyle'
 
 /** LogicFlow getGraphData / render 使用的节点结构 */
 export interface LfNode {
@@ -21,6 +30,8 @@ export interface LfNode {
   y: number
   text?: string | { value: string }
   properties?: Record<string, unknown>
+  /** DynamicGroup 子节点 id 列表 */
+  children?: string[]
 }
 
 /** LogicFlow 边结构 */
@@ -29,8 +40,10 @@ export interface LfEdge {
   type?: string
   sourceNodeId: string
   targetNodeId: string
-  /** 源锚点 id（HTTP 入口按路径槽绑定） */
+  /** 源锚点 id */
   sourceAnchorId?: string
+  /** 目标锚点 id（并发分组汇合 / 左入） */
+  targetAnchorId?: string
   text?: string | { value: string }
   properties?: Record<string, unknown>
   /** 贝塞尔折点 / 控制点 */
@@ -68,42 +81,68 @@ function normalizePointsList(
  * DSL → LogicFlow 图数据，供 lf.render 使用。
  */
 export function dslToGraph(dsl: FlowDSL): LfGraphData {
+  const parentChildren = new Map<string, string[]>()
+  for (const n of dsl.nodes || []) {
+    const pid = String(n.parentId || '').trim()
+    if (!pid) continue
+    const list = parentChildren.get(pid) || []
+    list.push(n.id)
+    parentChildren.set(pid, list)
+  }
+
   const nodes: LfNode[] = (dsl.nodes || []).map((n, i) => {
     const type = n.type || 'jsTransform'
     const meta = cachedComponentMeta(type)
-    return {
+    const conf = { ...(n.configuration || {}) }
+    const children = parentChildren.get(n.id) || []
+    const props: Record<string, unknown> = {
+      name: n.name || n.type,
+      configuration: conf,
+      isEntry: n.id === dsl.entryNode,
+      debug: !!n.debug,
+      color: meta?.color || '#fdd0a2',
+      iconText: meta?.iconText || 'ƒ',
+    }
+    if (n.parentId) {
+      props.parentId = n.parentId
+    }
+    if (type === 'concurrentGroup') {
+      props.children = children
+      props.allowEdgeConnect = true
+      props.width = Number(conf.width) || CG_DEFAULT_WIDTH
+      props.height = Number(conf.height) || CG_DEFAULT_HEIGHT
+    }
+    const node: LfNode = {
       id: n.id,
       type,
       x: n.x ?? 160 + (i % 4) * 200,
       y: n.y ?? 120 + Math.floor(i / 4) * 100,
       text: n.name || n.type,
-      properties: {
-        name: n.name || n.type,
-        configuration: n.configuration || {},
-        isEntry: n.id === dsl.entryNode,
-        debug: !!n.debug,
-        color: meta?.color || '#fdd0a2',
-        iconText: meta?.iconText || 'ƒ',
-      },
+      properties: props,
     }
+    if (type === 'concurrentGroup' && children.length) {
+      node.children = children
+    }
+    return node
   })
 
   const nodeById = new Map(nodes.map((n) => [n.id, n]))
+  const exitRels = new Set(concurrentExitRelations())
 
   const edges: LfEdge[] = (dsl.edges || []).map((e, i) => {
     const relation = e.relation || 'Success'
     const source = nodeById.get(e.from)
+    const target = nodeById.get(e.to)
     let text = relation
     let sourceAnchorId: string | undefined
+    let targetAnchorId: string | undefined
     const properties: Record<string, unknown> = { relation }
     const pointsList = normalizePointsList(e.pointsList)
 
-    // HTTP 入口：连线文案用名称或 METHOD path，并挂到唯一右侧锚点
     if (source?.type === 'httpEndpoint') {
       const routers = readRouters(source.properties?.configuration)
       let idx = routers.findIndex((r) => routerRelation(r) === relation)
       if (idx < 0) {
-        // 兼容旧数据：relation 仅为 Success 或路径
         idx = routers.findIndex(
           (r) => r.path === relation || routerLabel(r) === relation,
         )
@@ -118,7 +157,6 @@ export function dslToGraph(dsl: FlowDSL): LfGraphData {
       }
     }
 
-    // IF / SWITCH：用友好文案（case name 或 True/False/Default）
     if (source?.type === 'if' || source?.type === 'switch') {
       const cases =
         source.type === 'switch'
@@ -128,14 +166,43 @@ export function dslToGraph(dsl: FlowDSL): LfGraphData {
       properties.relation = relation
     }
 
-    // 注入执行：单右锚点，默认 Success
+    // 并发分组：扇出 / 出组
+    if (source?.type === 'concurrentGroup') {
+      const branches = new Set(
+        readConcurrentBranches(source.properties?.configuration),
+      )
+      if (exitRels.has(relation) && !branches.has(relation)) {
+        text = relation
+        properties.relation = relation
+        sourceAnchorId = `${e.from}_${CG_ANCHOR.right}`
+      } else {
+        text = relation
+        properties.relation = relation
+        sourceAnchorId = `${e.from}_${CG_ANCHOR.fork}`
+      }
+    }
+
+    // 连到并发分组：组内汇合 or 外部进入
+    if (target?.type === 'concurrentGroup') {
+      const fromParent = String(source?.properties?.parentId || '')
+      if (fromParent === e.to) {
+        const fail = relation === 'Failure'
+        targetAnchorId = `${e.to}_${fail ? CG_ANCHOR.joinFail : CG_ANCHOR.joinOk}`
+        properties.relation = fail ? 'Failure' : 'Success'
+        text = properties.relation as string
+      } else {
+        targetAnchorId = `${e.to}_${CG_ANCHOR.left}`
+        text = ''
+        properties.relation = 'Success'
+      }
+    }
+
     if (source?.type === 'inject') {
       text = relation === 'Success' || relation === 'Failure' ? relation : 'Success'
       properties.relation = text
       sourceAnchorId = `${e.from}_right`
     }
 
-    // JS 转换 / HTTP 客户端：单右锚点；文案为 Success / Failure
     if (source?.type === 'jsTransform' || source?.type === 'httpClient') {
       const rel =
         relation === 'Failure' || relation === 'Success' ? relation : 'Success'
@@ -144,7 +211,6 @@ export function dslToGraph(dsl: FlowDSL): LfGraphData {
       sourceAnchorId = `${e.from}_right`
     }
 
-    // 当前时间等：单入单出，relation=Success，画布不显示接线标签
     if (source?.type === 'currentTime') {
       text = ''
       properties.relation = 'Success'
@@ -157,6 +223,7 @@ export function dslToGraph(dsl: FlowDSL): LfGraphData {
       sourceNodeId: e.from,
       targetNodeId: e.to,
       sourceAnchorId,
+      targetAnchorId,
       text,
       properties,
     }
@@ -169,7 +236,6 @@ export function dslToGraph(dsl: FlowDSL): LfGraphData {
 
 /**
  * LogicFlow 图数据 → FlowDSL。
- * @param meta 流程元信息（id / name / entry 覆盖）
  */
 export function graphToDsl(
   graph: LfGraphData,
@@ -177,9 +243,18 @@ export function graphToDsl(
 ): FlowDSL {
   const nodes: FlowNode[] = (graph.nodes || []).map((n) => {
     const props = n.properties || {}
-    const configuration =
-      (props.configuration as Record<string, unknown> | undefined) || {}
-    return {
+    const configuration = {
+      ...((props.configuration as Record<string, unknown> | undefined) || {}),
+    }
+    if (n.type === 'concurrentGroup') {
+      const w = Number(props.width) || Number(configuration.width) || CG_DEFAULT_WIDTH
+      const h =
+        Number(props.height) || Number(configuration.height) || CG_DEFAULT_HEIGHT
+      configuration.width = w
+      configuration.height = h
+    }
+    const parentId = String(props.parentId || '').trim()
+    const node: FlowNode = {
       id: n.id,
       type: n.type,
       name: (props.name as string) || textValue(n.text, n.type),
@@ -188,7 +263,25 @@ export function graphToDsl(
       y: n.y,
       configuration,
     }
+    if (parentId) node.parentId = parentId
+    return node
   })
+
+  for (const n of graph.nodes || []) {
+    if (n.type !== 'concurrentGroup') continue
+    const childIds = new Set<string>()
+    const fromProps = n.properties?.children
+    if (Array.isArray(fromProps)) {
+      for (const id of fromProps) childIds.add(String(id))
+    }
+    if (Array.isArray(n.children)) {
+      for (const id of n.children) childIds.add(String(id))
+    }
+    for (const childId of childIds) {
+      const child = nodes.find((x) => x.id === childId)
+      if (child) child.parentId = n.id
+    }
+  }
 
   const edges: FlowEdge[] = (graph.edges || []).map((e) => {
     const edge: FlowEdge = {

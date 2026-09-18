@@ -16,6 +16,7 @@ export type ConfigWidget =
   | 'router-list'
   | 'var-list'
   | 'case-list'
+  | 'branch-list'
 
 /**
  * 是否应按「HTTP 路由列表」结构化编辑。
@@ -58,11 +59,22 @@ export function isCaseListField(field: ConfigField): boolean {
   return false
 }
 
+/** 是否应按并发分组线路列表编辑 */
+export function isBranchListField(field: ConfigField): boolean {
+  const w = (field.widget || '').trim()
+  if (w === 'branch-list') return true
+  if (field.name === 'branches' && (field.type || '').toLowerCase() === 'array') {
+    return true
+  }
+  return false
+}
+
 /** 解析最终使用的 widget */
 export function resolveWidget(field: ConfigField): ConfigWidget {
   // 路由列表优先：即使后端标了 code-json 也走结构化编辑
   if (isRouterListField(field)) return 'router-list'
   if (isCaseListField(field)) return 'case-list'
+  if (isBranchListField(field)) return 'branch-list'
 
   const w = (field.widget || '').trim()
   if (

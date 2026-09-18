@@ -19,6 +19,8 @@ const props = withDefaults(
     enableFormat?: boolean
     /** 本流程 globalVars 变量名（不含 global. 前缀） */
     globalNames?: string[]
+    /** 本流程 concurrentGroup 线路名 */
+    branchNames?: string[]
   }>(),
   {
     enableFormat: true,
@@ -109,6 +111,7 @@ defineExpose({ closeMaximize })
       :show-toolbar="false"
       :enable-format="enableFormat"
       :global-names="globalNames"
+      :branch-names="branchNames"
       :height="height || '180px'"
       @update:model-value="onUpdate"
     />
@@ -159,6 +162,7 @@ defineExpose({ closeMaximize })
             :show-toolbar="false"
             :enable-format="enableFormat"
             :global-names="globalNames"
+      :branch-names="branchNames"
             maximized
             height="100%"
             @update:model-value="onUpdate"

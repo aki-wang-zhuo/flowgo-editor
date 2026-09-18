@@ -3,7 +3,7 @@
  */
 import { onBeforeUnmount, ref, shallowRef, type Ref } from 'vue'
 import LogicFlow from '@logicflow/core'
-import { MiniMap, SelectionSelect, Snapshot } from '@logicflow/extension'
+import { DynamicGroup, MiniMap, SelectionSelect, Snapshot } from '@logicflow/extension'
 import '@logicflow/core/lib/style/index.css'
 import '@logicflow/extension/lib/style/index.css'
 import { registerFlowNodes } from './registerNodes'
@@ -82,11 +82,13 @@ export function useLogicFlow(
       adjustEdge: false, // 默认不显示连线调节手柄，双击连线后再开启
       edgeSelectedOutline: false, // 选中连线不显示外框，改由边样式变色
       hoverOutline: true,
+      // 允许节点级「拖拽改宽高」（仅 model.resizable=true 的节点，如并发分组）
+      allowResize: true,
       // 滚轮默认缩放画布（true = 禁止滚轮平移，改为缩放）
       stopScrollGraph: true,
       // 允许多选（框选结果可同时高亮多个节点）
       multipleSelectKey: 'ctrl',
-      plugins: [SelectionSelect, MiniMap, Snapshot],
+      plugins: [SelectionSelect, MiniMap, Snapshot, DynamicGroup],
       pluginsOptions: {
         // 右下角缩略图；关闭改走右键菜单（见 CanvasMiniMap）
         miniMap: {
@@ -98,6 +100,11 @@ export function useLogicFlow(
           rightPosition: 12,
           bottomPosition: 12,
         },
+        // 允许边连到并发分组框（扇出 / Success·Failure）
+        dynamicGroup: {
+          disallowEdgeConnectToGroup: false,
+          cascadeDeleteChildren: true,
+        },
       },
     })
     registerFlowNodes(instance, cachedComponentTypes())
@@ -106,6 +113,7 @@ export function useLogicFlow(
     instance.updateEditConfig?.({
       stopMoveGraph: false,
       stopScrollGraph: true,
+      allowResize: true,
     })
     configureCanvasZoom(instance)
     lf.value = instance

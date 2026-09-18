@@ -25,6 +25,16 @@ function anchorSide(
     []
   const hit = list.find((a) => a.id === anchorId)
   if (hit?.type === 'left' || hit?.type === 'right') return hit.type
+  // 并发分组：fork 视作出、join* 视作入（id 后缀优先）
+  if (anchorId.endsWith('_fork') || anchorId.includes('_fork')) return 'right'
+  if (
+    anchorId.endsWith('_joinOk') ||
+    anchorId.includes('_joinOk') ||
+    anchorId.endsWith('_joinFail') ||
+    anchorId.includes('_joinFail')
+  ) {
+    return 'left'
+  }
   if (anchorId.endsWith('_left') || anchorId.includes('_left')) return 'left'
   if (anchorId.endsWith('_right') || anchorId.includes('_right')) return 'right'
   if (anchorId.includes('http-out')) return 'right'

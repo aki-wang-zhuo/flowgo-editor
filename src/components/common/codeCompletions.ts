@@ -52,9 +52,11 @@ function toOptions(
 /**
  * 构建 CodeMirror 自动补全扩展。
  * @param globalNames 本流程 globalVars 已声明的变量名（不含 global. 前缀）
+ * @param branchNames 本流程 concurrentGroup 线路名（供 msg.branches.xxx）
  */
 export function buildCodeCompletionsExtension(
   globalNames: string[] = [],
+  branchNames: string[] = [],
 ): Extension {
   const extras = (globalNames || [])
     .map((n) => String(n || '').trim())
@@ -64,7 +66,21 @@ export function buildCodeCompletionsExtension(
       detail: 'flow global',
     }))
 
-  const options = toOptions([...BUILTIN_LABELS, ...extras])
+  const branchExtras: Array<{ label: string; detail: string }> = [
+    { label: 'msg.branches', detail: 'concurrent group results' },
+  ]
+  for (const name of branchNames || []) {
+    const n = String(name || '').trim()
+    if (!n) continue
+    branchExtras.push(
+      { label: `msg.branches.${n}`, detail: 'branch outcome' },
+      { label: `msg.branches.${n}.ok`, detail: 'branch ok' },
+      { label: `msg.branches.${n}.msg`, detail: 'branch message' },
+      { label: `msg.branches.${n}.error`, detail: 'branch error' },
+    )
+  }
+
+  const options = toOptions([...BUILTIN_LABELS, ...extras, ...branchExtras])
 
   function source(context: CompletionContext): CompletionResult | null {
     // 匹配标识符 / 点路径，如 msg.__dataTime.ye

@@ -3,7 +3,7 @@
  * 依赖 @logicflow/extension Snapshot（须已注册到主画布）。
  */
 import LogicFlow from '@logicflow/core'
-import { Snapshot } from '@logicflow/extension'
+import { DynamicGroup, Snapshot } from '@logicflow/extension'
 import { registerFlowNodes } from './registerNodes'
 import { cachedComponentTypes } from './componentCatalog'
 import type { LfInstance } from './lf-types'
@@ -77,7 +77,7 @@ async function exportViaTempLf(
       stopScrollGraph: true,
       history: false,
       snapline: false,
-      plugins: [Snapshot],
+      plugins: [Snapshot, DynamicGroup],
     })
     registerFlowNodes(temp, cachedComponentTypes())
     temp.render(data as unknown as Record<string, unknown>)

@@ -124,6 +124,7 @@ export const zhCN = {
     edgeEditSource: '编辑（打开所属节点属性）',
     edgeReselectPath: '重新选择请求路径',
     edgeReselectBranch: '重新选择分支',
+    edgeReselectConcurrentBranch: '重新选择线路 / 出组关系',
     edgeToggleResult: '切换 Success / Failure',
   },
   settings,

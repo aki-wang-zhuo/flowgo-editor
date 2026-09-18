@@ -17,6 +17,7 @@ import {
 } from '@/canvas/httpRouter'
 import { rebindHttpEdgePath } from '@/canvas/useHttpEndpointEdges'
 import { rebindBranchEdgeRelation } from '@/canvas/useBranchEdges'
+import { rebindConcurrentGroupEdgeRelation } from '@/canvas/useConcurrentGroupEdges'
 import {
   canRebindJsEdgeRelation,
   rebindJsEdgeRelation,
@@ -166,6 +167,14 @@ const isBranchEdge = computed(() => {
   return source?.type === 'if' || source?.type === 'switch'
 })
 
+/** 当前悬停边是否来自并发分组 */
+const isConcurrentGroupEdge = computed(() => {
+  const edge = currentEdge()
+  if (!edge || !props.lf) return false
+  const source = props.lf.getNodeModelById?.(edge.sourceNodeId)
+  return source?.type === 'concurrentGroup'
+})
+
 /** JS 转换出边，且当前仅 1 条出边时可切换 Success/Failure */
 const isJsSingleEdge = computed(() => {
   const edge = currentEdge()
@@ -178,7 +187,8 @@ const actions = computed(() => {
   if (props.actions) list = props.actions
   else if (isHttpEdge.value) list = [...EDGE_HTTP_ACTIONS]
   else if (isInjectEdge.value) list = [...EDGE_INJECT_ACTIONS]
-  else if (isBranchEdge.value) list = [...EDGE_BRANCH_ACTIONS]
+  else if (isBranchEdge.value || isConcurrentGroupEdge.value)
+    list = [...EDGE_BRANCH_ACTIONS]
   else if (isJsSingleEdge.value) list = [...EDGE_JS_SINGLE_ACTIONS]
   else list = [...EDGE_PATH_ACTIONS]
   if (!props.locked) return list
@@ -200,11 +210,13 @@ const tooltips = computed(() => {
       edit: t('selection.edgeEditSource'),
     }
   }
-  if (isBranchEdge.value) {
+  if (isBranchEdge.value || isConcurrentGroupEdge.value) {
     return {
       delete: t('selection.edgeDelete'),
       edit: t('selection.edgeEditSource'),
-      pickPath: t('selection.edgeReselectBranch'),
+      pickPath: isConcurrentGroupEdge.value
+        ? t('selection.edgeReselectConcurrentBranch')
+        : t('selection.edgeReselectBranch'),
     }
   }
   if (isJsSingleEdge.value) {
@@ -294,6 +306,11 @@ async function onPickPath() {
   }
   if (isBranchEdge.value) {
     const ok = await rebindBranchEdgeRelation(props.lf, edge.id)
+    if (ok) emit('change')
+    return
+  }
+  if (isConcurrentGroupEdge.value) {
+    const ok = await rebindConcurrentGroupEdgeRelation(props.lf, edge.id)
     if (ok) emit('change')
     return
   }

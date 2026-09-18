@@ -10,8 +10,10 @@ import DynamicCodeField from './DynamicCodeField.vue'
 import RouterListField from './RouterListField.vue'
 import GlobalVarListField from './GlobalVarListField.vue'
 import SwitchCaseListField from './SwitchCaseListField.vue'
+import BranchListField from './BranchListField.vue'
 import type { GlobalVarItem } from './globalVarList'
 import type { SwitchCaseRow } from './switchCaseList'
+import type { BranchRow } from './branchList'
 import {
   readFieldDisplayValue,
   writeFieldValue,
@@ -21,6 +23,7 @@ import { matchShowIf } from './showIf'
 import type { HttpRouterItem } from '@/canvas/httpRouter'
 import HttpResponseTemplateBar from '../HttpResponseTemplateBar.vue'
 import { collectFlowGlobalNames } from '@/components/common/collectFlowGlobalNames'
+import { collectFlowBranchNames } from '@/components/common/collectFlowBranchNames'
 
 const props = defineProps<{
   fields: ConfigField[]
@@ -79,6 +82,9 @@ function fieldLabel(f: ConfigField) {
   if (resolveWidget(f) === 'case-list') {
     return t('forms.switch.casesLabel')
   }
+  if (resolveWidget(f) === 'branch-list') {
+    return t('forms.branchListLabel')
+  }
   return (f.description || '').trim() || f.name
 }
 
@@ -103,6 +109,9 @@ function isGoExprField(f: ConfigField): boolean {
 
 /** 本流程已声明的 global 变量名（供代码补全） */
 const flowGlobalNames = computed(() => collectFlowGlobalNames(props.lf))
+
+/** 本流程并发分组线路名（供 msg.branches.xxx 补全） */
+const flowBranchNames = computed(() => collectFlowBranchNames(props.lf))
 
 function codeLanguage(f: ConfigField): 'json' | 'javascript' | 'text' {
   const w = resolveWidget(f)
@@ -177,6 +186,12 @@ function onCaseListUpdate(f: ConfigField, v: SwitchCaseRow[]) {
   emitUp()
 }
 
+/** 并发分组线路列表写回 */
+function onBranchListUpdate(f: ConfigField, v: BranchRow[]) {
+  local[f.name] = v
+  emitUp()
+}
+
 /** HTTP 响应 body 字段展示预设模板下拉 */
 function isHttpResponseBody(f: ConfigField) {
   return props.nodeType === 'httpResponse' && f.name === 'body'
@@ -223,11 +238,14 @@ defineExpose({ closeMaximize })
         :label="fieldLabel(f)"
         :required="f.required"
       >
-        <el-input-number
-          :model-value="Number(local[f.name]) || 0"
-          :controls="true"
-          @update:model-value="(v: number | undefined) => onNumberChange(f, v)"
-        />
+        <div class="select-with-hint">
+          <el-input-number
+            :model-value="Number(local[f.name]) || 0"
+            :controls="true"
+            @update:model-value="(v: number | undefined) => onNumberChange(f, v)"
+          />
+          <span v-if="f.hint" class="switch-hint">{{ f.hint }}</span>
+        </div>
       </el-form-item>
 
       <el-form-item
@@ -300,6 +318,18 @@ defineExpose({ closeMaximize })
         />
       </el-form-item>
 
+      <el-form-item
+        v-else-if="resolveWidget(f) === 'branch-list'"
+        :label="fieldLabel(f)"
+        :required="f.required"
+      >
+        <BranchListField
+          :model-value="local[f.name]"
+          @update:model-value="(v) => onBranchListUpdate(f, v)"
+        />
+        <div v-if="f.hint" class="branch-hint">{{ f.hint }}</div>
+      </el-form-item>
+
       <DynamicCodeField
         v-else-if="resolveWidget(f) === 'code-json' || resolveWidget(f) === 'code-js'"
         ref="codeRefs"
@@ -310,6 +340,7 @@ defineExpose({ closeMaximize })
         :hint="fieldHint(f)"
         :enable-format="!isGoExprField(f)"
         :global-names="flowGlobalNames"
+        :branch-names="flowBranchNames"
         @update:model-value="(v) => onCodeUpdate(f, v)"
       >
         <template v-if="isHttpResponseBody(f)" #below-head>
@@ -350,6 +381,12 @@ defineExpose({ closeMaximize })
 .switch-hint {
   flex: 1;
   min-width: 0;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.35;
+}
+.branch-hint {
+  margin-top: 6px;
   font-size: 11px;
   color: #9ca3af;
   line-height: 1.35;

@@ -124,6 +124,7 @@ export const enUS = {
     edgeEditSource: 'Edit (open source node properties)',
     edgeReselectPath: 'Reselect route',
     edgeReselectBranch: 'Reselect branch',
+    edgeReselectConcurrentBranch: 'Reselect branch / exit relation',
     edgeToggleResult: 'Toggle Success / Failure',
   },
   settings,

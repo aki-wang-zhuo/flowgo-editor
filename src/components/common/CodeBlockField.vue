@@ -44,6 +44,8 @@ const props = withDefaults(
     enableCompletions?: boolean
     /** 本流程 globalVars 已声明的变量名（不含 global. 前缀） */
     globalNames?: string[]
+    /** 本流程 concurrentGroup 线路名（msg.branches.xxx） */
+    branchNames?: string[]
     /** 是否全屏最大化 */
     maximized?: boolean
   }>(),
@@ -106,7 +108,12 @@ const extensions = computed((): Extension[] => {
   if (props.language === 'javascript') list.push(javascript())
   if (props.dark) list.push(oneDark)
   if (props.enableCompletions) {
-    list.push(buildCodeCompletionsExtension(props.globalNames || []))
+    list.push(
+      buildCodeCompletionsExtension(
+        props.globalNames || [],
+        props.branchNames || [],
+      ),
+    )
   }
   return list
 })
