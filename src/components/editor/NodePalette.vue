@@ -116,7 +116,7 @@ function defaultConfiguration(item: PaletteItem): Record<string, unknown> {
 /** 入端口数：缺省 1；入口类无入 */
 function inPortCount(item: PaletteItem): number {
   if (typeof item.inPorts === 'number') return Math.max(0, item.inPorts)
-  if (item.type === 'inject' || item.type === 'httpEndpoint') return 0
+  if (item.type === 'inject' || item.type === 'httpEndpoint' || item.type === 'mqttIn') return 0
   return 1
 }
 

@@ -118,6 +118,7 @@ export const enUS = {
     delete: 'Delete',
     run: 'Run (with downstream)',
     runOnly: 'Run this node only',
+    test: 'Test connection',
     pickPath: 'Reselect route',
     edgeDelete: 'Delete edge',
     edgeEditDebug: 'Edit debug value',

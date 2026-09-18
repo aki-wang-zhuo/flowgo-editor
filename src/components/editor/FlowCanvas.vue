@@ -231,6 +231,17 @@ async function onNodeRunOnly(nodeId: string) {
   })
 }
 
+async function onNodeTest(nodeId: string) {
+  if (!lf.value || !props.dsl?.id) return
+  const meta = flowMeta()
+  await runNode({
+    lf: lf.value,
+    nodeId,
+    mode: 'test',
+    ...meta,
+  })
+}
+
 function renderDsl(dsl: FlowDSL) {
   if (!lf.value) return
   const graph = dslToGraph(dsl)
@@ -297,6 +308,7 @@ defineExpose({ getGraphData, lf })
       @delete="onToolsDelete"
       @run="onNodeRun"
       @run-only="onNodeRunOnly"
+      @test="onNodeTest"
     />
     <EdgeSelectionTools
       v-if="lf"

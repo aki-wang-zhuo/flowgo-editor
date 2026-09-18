@@ -8,6 +8,7 @@ import { registerHttpEndpointEdgeRunner } from './runners/httpEndpointEdge'
 import { registerInjectNodeRunner } from './runners/injectNode'
 import { registerHttpClientNodeRunner } from './runners/httpClientNode'
 import { registerJsTransformNodeRunner } from './runners/jsTransformNode'
+import { registerMqttProbeRunner } from './runners/mqttProbe'
 import type { EdgeRunContext, NodeRunContext } from './types'
 
 let inited = false
@@ -20,6 +21,7 @@ export function ensureRunnersRegistered() {
   registerInjectNodeRunner()
   registerHttpClientNodeRunner()
   registerJsTransformNodeRunner()
+  registerMqttProbeRunner()
 }
 
 function snapshotDsl(
@@ -76,7 +78,7 @@ export async function runNode(opts: {
   flowName: string
   entryNode?: string
   nodeId: string
-  mode: 'run' | 'runOnly'
+  mode: 'run' | 'runOnly' | 'test'
 }) {
   ensureRunnersRegistered()
   const dsl = snapshotDsl(opts.lf, {

@@ -4,7 +4,7 @@
  * 纯展示：由父级控制可见性、坐标与动作列表；不绑定 LogicFlow。
  */
 import { computed, useTemplateRef } from 'vue'
-import { Edit, Delete, VideoPlay, CaretRight, Switch } from '@element-plus/icons-vue'
+import { Edit, Delete, VideoPlay, CaretRight, Switch, Connection } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 import { getActionTooltip, type SelectionActionKey } from './actionKeys'
 import { useI18n } from 'vue-i18n'
@@ -27,7 +27,7 @@ const props = withDefaults(
     ariaLabel?: string
   }>(),
   {
-    actions: () => ['edit', 'delete', 'run', 'runOnly'],
+    actions: () => ['edit', 'delete', 'run', 'runOnly', 'test'],
     flipDown: false,
   },
 )
@@ -43,6 +43,7 @@ const emit = defineEmits<{
   delete: []
   run: []
   runOnly: []
+  test: []
   pickPath: []
   /** 悬停工具条：供节点 hover 菜单取消延迟隐藏 */
   barEnter: []
@@ -56,6 +57,7 @@ const ICON_MAP: Record<SelectionActionKey, Component> = {
   delete: Delete,
   run: VideoPlay,
   runOnly: CaretRight,
+  test: Connection,
   pickPath: Switch,
 }
 
@@ -63,6 +65,7 @@ const TONE_CLASS: Partial<Record<SelectionActionKey, string>> = {
   delete: 'fg-action-bar__btn--danger',
   run: 'fg-action-bar__btn--primary',
   runOnly: 'fg-action-bar__btn--warning',
+  test: 'fg-action-bar__btn--accent',
   pickPath: 'fg-action-bar__btn--accent',
 }
 
@@ -77,6 +80,7 @@ function onClick(key: SelectionActionKey) {
   else if (key === 'delete') emit('delete')
   else if (key === 'run') emit('run')
   else if (key === 'runOnly') emit('runOnly')
+  else if (key === 'test') emit('test')
   else if (key === 'pickPath') emit('pickPath')
 }
 

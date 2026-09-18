@@ -48,6 +48,9 @@ export const forms = {
     addPath: '添加路径',
     duplicatePath: '相同请求方法下路径不能重复：{path}',
   },
+  mqttOut: {
+    reuseNone: '不复用（使用下方连接模式）',
+  },
   httpClient: {
     method: '方法 (method)',
     timeout: '超时秒数',

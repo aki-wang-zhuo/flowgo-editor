@@ -61,7 +61,7 @@ export function nodeHasBothAnchors(model: NodeModelLike | null | undefined): boo
 /** 按类型粗判：入口仅出、出口仅入，不可插入到边中间 */
 function typeHasBothAnchors(type: string | undefined): boolean {
   if (!type) return false
-  return type !== 'inject' && type !== 'httpEndpoint' && type !== 'httpResponse' &&
+  return type !== 'inject' && type !== 'httpEndpoint' && type !== 'mqttIn' && type !== 'httpResponse' &&
     type !== 'concurrentGroup'
 }
 

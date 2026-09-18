@@ -118,6 +118,7 @@ export const zhCN = {
     delete: '删除',
     run: '运行（含下游）',
     runOnly: '仅运行此节点',
+    test: '测试连接',
     pickPath: '重新选择请求路径',
     edgeDelete: '删除连线',
     edgeEditDebug: '编辑调试值',

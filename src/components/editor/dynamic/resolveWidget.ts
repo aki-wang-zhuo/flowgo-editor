@@ -13,6 +13,7 @@ export type ConfigWidget =
   | 'switch'
   | 'number'
   | 'select'
+  | 'mqtt-in-ref'
   | 'router-list'
   | 'var-list'
   | 'case-list'
@@ -90,7 +91,8 @@ export function resolveWidget(field: ConfigField): ConfigWidget {
     w === 'code-js' ||
     w === 'switch' ||
     w === 'number' ||
-    w === 'select'
+    w === 'select' ||
+    w === 'mqtt-in-ref'
   ) {
     return w
   }

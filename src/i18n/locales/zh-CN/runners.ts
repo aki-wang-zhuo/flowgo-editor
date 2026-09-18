@@ -30,4 +30,10 @@ export const runners = {
     success: 'JS 转换执行完成（含下游）',
     successOnly: 'JS 转换本节点执行完成',
   },
+  mqtt: {
+    unsupported: '仅支持 MQTT 收 / 发节点',
+    defaultName: 'MQTT',
+    consoleStart: 'MQTT 测试：{name}',
+    reuseMissing: '未找到要复用的 MQTT 收节点，请检查「复用客户端」配置',
+  },
 }

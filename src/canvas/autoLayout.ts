@@ -23,7 +23,7 @@ import {
 } from './autoLayoutShared'
 
 /** 数据入口节点类型（仅出边） */
-const ENTRY_TYPES = new Set(['httpEndpoint', 'inject'])
+const ENTRY_TYPES = new Set(['httpEndpoint', 'inject', 'mqttIn'])
 
 export type AutoLayoutOpts = Partial<typeof AUTO_LAYOUT_DEFAULTS>
 

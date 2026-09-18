@@ -48,6 +48,9 @@ export const forms = {
     addPath: 'Add route',
     duplicatePath: 'Duplicate path for the same method: {path}',
   },
+  mqttOut: {
+    reuseNone: 'Do not reuse (use session mode below)',
+  },
   httpClient: {
     method: 'Method',
     timeout: 'Timeout (seconds)',

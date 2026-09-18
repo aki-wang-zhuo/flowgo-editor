@@ -24,6 +24,7 @@ import type { HttpRouterItem } from '@/canvas/httpRouter'
 import HttpResponseTemplateBar from '../HttpResponseTemplateBar.vue'
 import { collectFlowGlobalNames } from '@/components/common/collectFlowGlobalNames'
 import { collectFlowBranchNames } from '@/components/common/collectFlowBranchNames'
+import { listMqttInOptions } from './mqttInOptions'
 
 const props = defineProps<{
   fields: ConfigField[]
@@ -31,6 +32,8 @@ const props = defineProps<{
   modelValue: Record<string, unknown>
   /** 节点 type，用于 HTTP 响应体模板等特化 */
   nodeType?: string
+  /** 当前编辑节点 id（mqtt-in-ref 排除自身） */
+  nodeId?: string | null
   /** 画布实例：用于收集本流程 globalVars 补全 */
   lf?: LfInstance | null
 }>()
@@ -112,6 +115,9 @@ const flowGlobalNames = computed(() => collectFlowGlobalNames(props.lf))
 
 /** 本流程并发分组线路名（供 msg.branches.xxx 补全） */
 const flowBranchNames = computed(() => collectFlowBranchNames(props.lf))
+
+/** 画布中可复用的 MQTT 收节点 */
+const mqttInOptions = computed(() => listMqttInOptions(props.lf, props.nodeId))
 
 function codeLanguage(f: ConfigField): 'json' | 'javascript' | 'text' {
   const w = resolveWidget(f)
@@ -265,6 +271,35 @@ defineExpose({ closeMaximize })
               :key="opt.value"
               :label="opt.label || opt.value"
               :value="opt.value"
+            />
+          </el-select>
+          <span v-if="f.hint" class="switch-hint">{{ f.hint }}</span>
+        </div>
+      </el-form-item>
+
+      <el-form-item
+        v-else-if="resolveWidget(f) === 'mqtt-in-ref'"
+        :label="fieldLabel(f)"
+        :required="f.required"
+      >
+        <div class="select-with-hint">
+          <el-select
+            :model-value="String(local[f.name] ?? '')"
+            clearable
+            filterable
+            style="width: 100%"
+            :placeholder="t('forms.mqttOut.reuseNone')"
+            @update:model-value="(v: string | null) => onSelectChange(f, v || '')"
+          >
+            <el-option
+              :label="t('forms.mqttOut.reuseNone')"
+              value=""
+            />
+            <el-option
+              v-for="opt in mqttInOptions"
+              :key="opt.id"
+              :label="opt.label"
+              :value="opt.id"
             />
           </el-select>
           <span v-if="f.hint" class="switch-hint">{{ f.hint }}</span>

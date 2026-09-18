@@ -81,6 +81,7 @@ export interface NodeToolbarActions {
   delete?: boolean
   run?: boolean
   runOnly?: boolean
+  test?: boolean
 }
 
 /** 节点分组（侧栏折叠） */

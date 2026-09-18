@@ -256,3 +256,28 @@ export async function simulateJsTransform(
   )
   return data
 }
+
+/** MQTT 连接探测结果 */
+export interface MqttProbeResult {
+  ok: boolean
+  message: string
+}
+
+/**
+ * MQTT 探测：收=连接并订阅后断开；发=连接并发布后断开。
+ * configuration 为画布当前属性；复用收节点时传 reuseConfiguration。
+ */
+export async function probeMqtt(
+  id: string,
+  payload: {
+    kind: 'subscribe' | 'publish'
+    configuration: Record<string, unknown>
+    reuseConfiguration?: Record<string, unknown>
+  },
+) {
+  const { data } = await http.post<MqttProbeResult>(
+    `/flows/${encodeURIComponent(id)}/debug/mqtt-probe`,
+    payload,
+  )
+  return data
+}

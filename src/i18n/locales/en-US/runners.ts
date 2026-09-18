@@ -30,4 +30,10 @@ export const runners = {
     success: 'JS transform finished (with downstream)',
     successOnly: 'JS transform node finished',
   },
+  mqtt: {
+    unsupported: 'MQTT In / Out nodes only',
+    defaultName: 'MQTT',
+    consoleStart: 'MQTT test: {name}',
+    reuseMissing: 'MQTT In node to reuse was not found; check reuse settings',
+  },
 }

@@ -25,7 +25,7 @@ export interface NodeRunContext {
   lf: LfInstance
   nodeId: string
   /** run = 从此节点运行；runOnly = 仅此节点 */
-  mode: 'run' | 'runOnly'
+  mode: 'run' | 'runOnly' | 'test'
 }
 
 export type RunContext = EdgeRunContext | NodeRunContext

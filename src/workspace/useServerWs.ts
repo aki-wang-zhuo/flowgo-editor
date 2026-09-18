@@ -68,9 +68,26 @@ export interface PatchedFlowReplyPayload {
   message?: string
 }
 
+export interface FlowDebugPayload {
+  flowId: string
+  logs?: Array<{
+    ts?: number
+    flowType?: string
+    nodeId?: string
+    nodeName?: string
+    relationType?: string
+    data?: string
+    err?: string
+    durationMs?: number
+  }>
+  error?: string
+}
+
 export interface UseServerWsHandlers {
   onFlowChanged?: (p: FlowChangedPayload) => void
   onEditorCommand?: (p: EditorCommandPayload) => void
+  /** MQTT 等入口触发后推送的调试日志 */
+  onFlowDebug?: (p: FlowDebugPayload) => void
   /** 收到 editor.query 时由工作区组装应答并通过 sendActiveFlow 回传 */
   onEditorQuery?: (p: EditorQueryPayload) => void
   /** 收到 editor.patch 时应用增量补丁并通过 sendPatchedFlow 回传 */
@@ -144,6 +161,14 @@ export function useServerWs(handlers: UseServerWsHandlers = {}) {
     return send({ type: 'editor.patched', payload })
   }
 
+  /**
+   * 上报当前打开的流程 Tab 列表，供服务端挂载/释放草稿 MQTT「连接并响应」。
+   * 关闭全部 Tab 时应传空数组以释放草稿连接。
+   */
+  function sendOpenFlows(openIds: string[]) {
+    return send({ type: 'editor.open_flows', payload: { openIds: openIds || [] } })
+  }
+
   function connect() {
     const token = auth.token
     if (!token) {
@@ -195,6 +220,9 @@ export function useServerWs(handlers: UseServerWsHandlers = {}) {
       if (msg.type === 'flow.changed' && handlers.onFlowChanged) {
         handlers.onFlowChanged((msg.payload || {}) as FlowChangedPayload)
       }
+      if (msg.type === 'flow.debug' && handlers.onFlowDebug) {
+        handlers.onFlowDebug((msg.payload || {}) as FlowDebugPayload)
+      }
       if (msg.type === 'editor.command' && handlers.onEditorCommand) {
         handlers.onEditorCommand((msg.payload || {}) as EditorCommandPayload)
       }
@@ -217,5 +245,6 @@ export function useServerWs(handlers: UseServerWsHandlers = {}) {
     send,
     sendActiveFlow,
     sendPatchedFlow,
+    sendOpenFlows,
   }
 }

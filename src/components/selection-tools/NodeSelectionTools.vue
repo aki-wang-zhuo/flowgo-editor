@@ -35,6 +35,7 @@ const emit = defineEmits<{
   delete: [nodeId: string]
   run: [nodeId: string]
   runOnly: [nodeId: string]
+  test: [nodeId: string]
 }>()
 
 const { t } = useI18n()
@@ -107,7 +108,7 @@ const actions = computed(() => {
     list = resolveNodeActions(cachedNodeActions(type), props.actions)
   }
   if (!props.locked) return list
-  return list.filter((a) => a === 'run' || a === 'runOnly')
+  return list.filter((a) => a === 'run' || a === 'runOnly' || a === 'test')
 })
 
 function requireId(): string | null {
@@ -134,6 +135,11 @@ function onRunOnly() {
   if (!id) return
   emit('runOnly', id)
 }
+function onTest() {
+  const id = requireId()
+  if (!id) return
+  emit('test', id)
+}
 </script>
 
 <template>
@@ -149,6 +155,7 @@ function onRunOnly() {
     @delete="onDelete"
     @run="onRun"
     @runOnly="onRunOnly"
+    @test="onTest"
     @bar-enter="onToolbarEnter"
     @bar-leave="onToolbarLeave"
   />

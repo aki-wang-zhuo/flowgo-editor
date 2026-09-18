@@ -2,7 +2,8 @@
  * 注册 FlowGo 画布节点（LogicFlow）。
  * 入口节点仅右出、出口节点仅左入；中间节点左入右出。
  * 可从左侧拉到对方右侧，随后翻转为出→入；禁止自环。
- * httpEndpoint 出边受路径数限制；jsTransform / httpClient 最多两条（Success/Failure）。
+ * httpEndpoint 出边受路径数限制；jsTransform / httpClient / mqttOut 最多两条（Success/Failure）。
+ * mqttIn 为入口仅出。
  */
 import LogicFlow from '@logicflow/core'
 import { NodeRedModel, NodeRedView } from './nodes/nodeRedStyle'
@@ -10,6 +11,7 @@ import { HttpEndpointModel, HttpEndpointView } from './nodes/httpEndpointStyle'
 import { HttpResponseModel, HttpResponseView } from './nodes/httpResponseStyle'
 import { JsTransformModel, JsTransformView } from './nodes/jsTransformStyle'
 import { InjectModel, InjectView } from './nodes/injectStyle'
+import { MqttInModel, MqttInView } from './nodes/mqttInStyle'
 import { GlobalVarsModel, GlobalVarsView } from './nodes/globalVarsStyle'
 import { SingleIOModel, SingleIOView } from './nodes/singleIOStyle'
 import {
@@ -28,6 +30,8 @@ export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
   set.add('httpEndpoint')
   set.add('httpResponse')
   set.add('inject')
+  set.add('mqttIn')
+  set.add('mqttOut')
   set.add('jsTransform')
   set.add('httpClient')
   set.add('if')
@@ -50,6 +54,14 @@ export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
         type,
         view: InjectView,
         model: InjectModel,
+      })
+      continue
+    }
+    if (type === 'mqttIn') {
+      lf.register({
+        type,
+        view: MqttInView,
+        model: MqttInModel,
       })
       continue
     }
@@ -85,8 +97,8 @@ export function registerFlowNodes(lf: LogicFlow, types: string[] = []) {
       })
       continue
     }
-    // jsTransform / httpClient：共用双出边上限模型
-    if (type === 'jsTransform' || type === 'httpClient') {
+    // jsTransform / httpClient / mqttOut：共用双出边上限模型
+    if (type === 'jsTransform' || type === 'httpClient' || type === 'mqttOut') {
       lf.register({
         type,
         view: JsTransformView,

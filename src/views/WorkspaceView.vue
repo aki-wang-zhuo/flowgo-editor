@@ -24,11 +24,17 @@ import {
   type EditorPatchPayload,
   type EditorQueryPayload,
   type FlowChangedPayload,
+  type FlowDebugPayload,
 } from '@/workspace/useServerWs'
 import {
   applyActiveFlowPatch,
   type ActiveFlowPatch,
 } from '@/workspace/applyActiveFlowPatch'
+import {
+  appendConsoleLog,
+  appendServerDebugLogs,
+  openConsole,
+} from '@/console/useEditorConsole'
 import TabBar from '@/workspace/TabBar.vue'
 import LeftDock from '@/components/editor/LeftDock.vue'
 import FlowEditorPane from '@/components/editor/FlowEditorPane.vue'
@@ -395,14 +401,33 @@ function onWsEditorPatch(p: EditorPatchPayload) {
   })
 }
 
+/** MQTT 等入口触发：把调试日志推到控制台（仅当前激活流程） */
+function onWsFlowDebug(p: FlowDebugPayload) {
+  const fid = String(p.flowId || '')
+  if (!fid || activeTab.value?.id !== fid) return
+  openConsole()
+  if (p.logs?.length) {
+    appendServerDebugLogs(p.logs)
+  }
+  if (p.error) {
+    appendConsoleLog({
+      flowType: 'ERROR',
+      data: p.error,
+      err: p.error,
+    })
+  }
+}
+
 const {
   status: wsStatus,
   connect: connectWs,
   disconnect: disconnectWs,
   sendActiveFlow,
   sendPatchedFlow,
+  sendOpenFlows,
 } = useServerWs({
   onFlowChanged: onWsFlowChanged,
+  onFlowDebug: onWsFlowDebug,
   onEditorCommand: (p) => {
     void onWsEditorCommand(p)
   },
@@ -419,6 +444,19 @@ const {
   },
 })
 
+/**
+ * WS 连上或 Tab 开闭时上报 openIds。
+ * 关闭全部草稿 Tab → 服务端释放对应 MQTT；已发布轨常驻，不受影响。
+ */
+function reportOpenFlows() {
+  if (wsStatus.value !== 'connected') return
+  sendOpenFlows([...openIds.value])
+}
+
+watch(wsStatus, (s) => {
+  if (s === 'connected') reportOpenFlows()
+})
+watch(openIds, () => reportOpenFlows(), { deep: true })
 /** 按 MCP 全局开关连接或断开 WebSocket */
 function syncWsWithMcp(enabled: boolean) {
   mcpEnabled.value = enabled

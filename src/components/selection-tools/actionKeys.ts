@@ -10,15 +10,17 @@ export type SelectionActionKey =
   | 'delete'
   | 'run'
   | 'runOnly'
+  | 'test'
   /** 重新选择 HTTP 请求路径（仅 HTTP 出边） */
   | 'pickPath'
 
-/** 节点默认动作：编辑 / 删除 / 运行 / 仅运行此节点 */
+/** 节点默认动作：编辑 / 删除 / 运行 / 仅运行此节点 / 测试 */
 export const NODE_DEFAULT_ACTIONS: SelectionActionKey[] = [
   'edit',
   'delete',
   'run',
   'runOnly',
+  'test',
 ]
 
 /** 普通连线：删除 / 编辑（运行只出现在 HTTP 入口出边） */
@@ -57,6 +59,7 @@ const ACTION_I18N_KEYS: Record<SelectionActionKey, string> = {
   delete: 'selection.delete',
   run: 'selection.run',
   runOnly: 'selection.runOnly',
+  test: 'selection.test',
   pickPath: 'selection.pickPath',
 }
 
@@ -79,6 +82,7 @@ export function resolveNodeActions(
     if (key === 'delete') return a.delete === true
     if (key === 'run') return a.run === true
     if (key === 'runOnly') return a.runOnly === true
+    if (key === 'test') return a.test === true
     return false
   })
 }
